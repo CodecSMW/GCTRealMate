@@ -87,7 +87,7 @@ void PPCop::findAliases(string& comparedString, bool& foundVal, aliasGroup& loca
 	}
 	for (int i = 0; i < localReplaceList.aliasList.size(); i++)
 	{
-		if (boost::iequals(comparedString, localReplaceList.aliasList.at(i).aliasName))
+		if (iequals(comparedString, localReplaceList.aliasList.at(i).aliasName))
 		{
 			foundVal = true;
 			comparedString = localReplaceList.aliasList.at(i).aliasContent;
@@ -98,7 +98,7 @@ void PPCop::findAliases(string& comparedString, bool& foundVal, aliasGroup& loca
 	{
 		for (int i = 0; i < replaceList.aliasList.size(); i++)
 		{
-			if (boost::iequals(comparedString, replaceList.aliasList.at(i).aliasName))
+			if (iequals(comparedString, replaceList.aliasList.at(i).aliasName))
 			{
 				foundVal = true;
 				comparedString = replaceList.aliasList.at(i).aliasContent;
@@ -165,13 +165,13 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 		case 'a': case 'A':
 			opMath(opPieces); break;	//add, and
 		case 'b': case 'B':
-			if (boost::iequals(opPieces[0].substr(0,4),"byte"))
+			if (iequals(opPieces[0].substr(0,4),"byte"))
 				opTypes(opPieces); //word, byte, half
 			else 
 				opBranch(opPieces); break;
 		case 'c': case 'C':
-			if (boost::iequals(opPieces[0].substr(0, 4), "cntl")) { opMath(opPieces); break; } //count leading zeroes	
-			else if (boost::iequals(opPieces[0].substr(0, 3), "cmp")) { opCompare(opPieces); break; } //compare
+			if (iequals(opPieces[0].substr(0, 4), "cntl")) { opMath(opPieces); break; } //count leading zeroes	
+			else if (iequals(opPieces[0].substr(0, 3), "cmp")) { opCompare(opPieces); break; } //compare
 			else { opConReg(opPieces); break; } //conditional registers
 		case 'd': case 'D':
 			opMath(opPieces); break;	//div
@@ -180,13 +180,13 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 		case 'f': case 'F':
 			opFloat(opPieces); break; //float operations
 		case 'i': case 'I':
-			if (boost::iequals(opPieces[0].substr(0, 2), "IC"))
+			if (iequals(opPieces[0].substr(0, 2), "IC"))
 			{
-				if (boost::iequals(opPieces[0].substr(2, 6), "_basic"))
+				if (iequals(opPieces[0].substr(2, 6), "_basic"))
 					psaTypes(opPieces, 0x00000000);
-				else if (boost::iequals(opPieces[0].substr(2, 6), "_float"))
+				else if (iequals(opPieces[0].substr(2, 6), "_float"))
 					psaTypes(opPieces, 0x01000000);
-				else if (boost::iequals(opPieces[0].substr(2, 4), "_bit"))
+				else if (iequals(opPieces[0].substr(2, 4), "_bit"))
 					psaTypes(opPieces, 0x02000000);
 				else
 					opInst(opPieces); break;
@@ -194,14 +194,14 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 			}
 			opInst(opPieces); break;
 		case 'l': case 'L':
-			if (boost::iequals(opPieces[0].substr(0, 2), "li")) { opMath(opPieces); break; } //load immediate	
-			else if (boost::iequals(opPieces[0].substr(0, 2), "LA"))
+			if (iequals(opPieces[0].substr(0, 2), "li")) { opMath(opPieces); break; } //load immediate	
+			else if (iequals(opPieces[0].substr(0, 2), "LA"))
 			{
-				if (boost::iequals(opPieces[0].substr(2, 6), "_basic"))
+				if (iequals(opPieces[0].substr(2, 6), "_basic"))
 					psaTypes(opPieces, 0x10000000);
-				else if (boost::iequals(opPieces[0].substr(2, 6), "_float"))
+				else if (iequals(opPieces[0].substr(2, 6), "_float"))
 					psaTypes(opPieces, 0x11000000);
-				else if (boost::iequals(opPieces[0].substr(2, 4), "_bit"))
+				else if (iequals(opPieces[0].substr(2, 4), "_bit"))
 					psaTypes(opPieces, 0x12000000);
 				else
 					badOp = ((int32_t)value == -1);
@@ -209,8 +209,8 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 			}
 			else { opLoad(opPieces); break; } //load	
 		case 'm': case 'M':
-			if (boost::iequals(opPieces[0].substr(0, 3), "mul")) { opMath(opPieces); break; } //multiply	
-			else if (boost::iequals(opPieces[0].substr(0, 2), "mr")) { opMath(opPieces); break; } //move register
+			if (iequals(opPieces[0].substr(0, 3), "mul")) { opMath(opPieces); break; } //multiply	
+			else if (iequals(opPieces[0].substr(0, 2), "mr")) { opMath(opPieces); break; } //move register
 			else { opMove(opPieces); break; } //load	
 		case 'n': case 'N':
 			opMath(opPieces); break;  //neg, nand, nop
@@ -219,13 +219,13 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 		case 'p': case 'P':
 			opPairedSingle(opPieces); break; //ps
 		case 'r': case 'R':
-			if (boost::iequals(opPieces[0].substr(0, 2), "RA"))
+			if (iequals(opPieces[0].substr(0, 2), "RA"))
 			{
-				if (boost::iequals(opPieces[0].substr(2, 6), "_basic"))
+				if (iequals(opPieces[0].substr(2, 6), "_basic"))
 					psaTypes(opPieces, 0x20000000);
-				else if (boost::iequals(opPieces[0].substr(2, 6), "_float"))
+				else if (iequals(opPieces[0].substr(2, 6), "_float"))
 					psaTypes(opPieces, 0x21000000);
-				else if (boost::iequals(opPieces[0].substr(2, 4), "_bit"))
+				else if (iequals(opPieces[0].substr(2, 4), "_bit"))
 					psaTypes(opPieces, 0x22000000);
 				else
 					badOp = ((int32_t)value == -1);
@@ -233,9 +233,9 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 			}
 			opRotate(opPieces); break; //rot, rl
 		case 's': case 'S':
-			if (boost::iequals(opPieces[0].substr(0, 3), "sub")) {opMath(opPieces); break;} //sub	
-			else if (boost::iequals(opPieces[0].substr(0, 2), "st")) { opStore(opPieces); break; } //store
-			else if (boost::iequals(opPieces[0].substr(0, 6), "scalar")) { opTypes(opPieces); break; } //scalar 
+			if (iequals(opPieces[0].substr(0, 3), "sub")) {opMath(opPieces); break;} //sub	
+			else if (iequals(opPieces[0].substr(0, 2), "st")) { opStore(opPieces); break; } //store
+			else if (iequals(opPieces[0].substr(0, 6), "scalar")) { opTypes(opPieces); break; } //scalar 
 			else { opRotate(opPieces); break; } //shift		
 		case 't': case 'T':
 			opTrap(opPieces); break;
@@ -253,7 +253,7 @@ bool PPCop::isOp(string opString, string compare)
 {
 	int size = compare.size();
 	bool isSame;
-	isSame = boost::iequals(opString.substr(opLength, size), compare);
+	isSame = iequals(opString.substr(opLength, size), compare);
 	if (!isSame)
 		return false;
 	opLength += size;
@@ -397,7 +397,7 @@ void PPCop::opBranch(vector<string>& vecList)
 	if (vecList.size() > 1)
 	{
 		int i = vecList.size() - 1;
-		if (boost::iequals(vecList[i].substr(0, 2), "0x") || boost::iequals(vecList[i].substr(0, 3), "-0x"))
+		if (iequals(vecList[i].substr(0, 2), "0x") || iequals(vecList[i].substr(0, 3), "-0x"))
 		{
 			tempOff = stoi(vecList[i], nullptr, 16);
 
@@ -663,7 +663,7 @@ void PPCop::opMath(vector<string>& vecList)
 
 	if (getOpBeginning() == 31)
 	{
-		if (boost::iequals(vecList[0].substr(vecList[0].size() - 2, 2), "o."))
+		if (iequals(vecList[0].substr(vecList[0].size() - 2, 2), "o."))
 			value += 401;
 		else if (vecList[0].at(vecList[0].size() - 1) == 'o' || vecList[0].at(vecList[0].size() - 1) == 'O')
 			value += 400;
@@ -678,11 +678,11 @@ void PPCop::opMove(vector<string>& vecList)
 	if (ISOP("mtspr"))	//Move To Special Purpose Register X-Form
 	{
 		value += 467 * 2;
-		if (boost::iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
+		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
 			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (boost::iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
+		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
 			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (boost::iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
+		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
 			value += setBTBABB(regClean(vecList[1]), 1, 0);
 	}
 	else if (ISOP("mtlr"))	value += 467 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move To Link Register
@@ -691,11 +691,11 @@ void PPCop::opMove(vector<string>& vecList)
 	else if (ISOP("mfspr"))
 	{
 		value += 339 * 2;
-		if (boost::iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
+		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
 			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (boost::iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
+		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
 			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (boost::iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
+		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
 			value += setBTBABB(regClean(vecList[1]), 1, 0);;
 	}
 	else if (ISOP("mflr"))	value += 339 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move From Link Register
@@ -712,7 +712,7 @@ void PPCop::opMove(vector<string>& vecList)
 		value += 144 * 2 + 0xFF * pow(2, 31 - 19) + regClean(vecList[1]) * pow(2, 31 - 10);
 	}
 
-	if (boost::ifind_first(vecList[0], ".") && getOpBeginning() == 63)
+	if (vecList[0].find_first_of('.') != std::string::npos && getOpBeginning() == 63)
 		value++;
 }
 void PPCop::opPairedSingle(vector<string>& vecList)
@@ -818,7 +818,7 @@ void PPCop::opRotate(vector<string>& vecList)
 
 
 
-	if (boost::ifind_first(vecList[0], "."))
+	if (vecList[0].find_first_of('.') != std::string::npos)
 		value++;
 }
 void PPCop::opFloat(vector<string>& vecList)
@@ -872,7 +872,7 @@ void PPCop::opFloat(vector<string>& vecList)
 	}
 
 
-	if (boost::ifind_first(vecList[0], "."))
+	if (vecList[0].find_first_of('.') != std::string::npos)
 		value++;
 }
 void PPCop::opTrap(vector<string>& vecList)

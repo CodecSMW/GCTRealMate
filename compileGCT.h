@@ -6,11 +6,9 @@
 #include <queue>
 #include <stack>
 #include <vector>
-#include <boost/filesystem.hpp>
-#include <boost/format.hpp>
-#include <boost/algorithm/string.hpp>
 #include <string>
 #include "Code.h"
+#include "utility.h"
 #include "aliasGroup.h"
 
 using namespace std;

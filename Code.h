@@ -7,8 +7,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <boost/algorithm/string.hpp>
 #include "PPCop.h"
+#include "utility.h"
 #include "aliasGroup.h"
 
 using namespace std;

@@ -46,7 +46,7 @@ void Code::ImplementLabel()
 {
 	for (list<label>::iterator i = labelList.begin(); i != labelList.end(); i++)
 	{
-		if (boost::iequals(labelFillList.front().labelType, i->labelType))
+		if (iequals(labelFillList.front().labelType, i->labelType))
 		{
 			switch (labelFillList.front().insertMode)
 			{
@@ -63,7 +63,7 @@ void Code::findAliases(string& comparedString, bool& foundVal)
 {
 	for (int i = 0; i < localReplaceList.aliasList.size(); i++)
 	{
-		if (boost::iequals(comparedString, localReplaceList.aliasList.at(i).aliasName))
+		if (iequals(comparedString, localReplaceList.aliasList.at(i).aliasName))
 		{
 			foundVal = true;
 			comparedString = localReplaceList.aliasList.at(i).aliasContent;
@@ -72,7 +72,7 @@ void Code::findAliases(string& comparedString, bool& foundVal)
 	}
 	for (int i = 0; i < replaceList.aliasList.size(); i++)
 	{
-		if (boost::iequals(comparedString, replaceList.aliasList.at(i).aliasName))
+		if (iequals(comparedString, replaceList.aliasList.at(i).aliasName))
 		{
 			foundVal = true;
 			comparedString = replaceList.aliasList.at(i).aliasContent;
@@ -97,7 +97,7 @@ string Code::getMacro(string macroName, vector<string>& ArgOrig)
 {
 	for (int i = 0; i < localReplaceList.macroList.size(); i++)
 	{
-		if (boost::equals(macroName, localReplaceList.macroList.at(i).name))
+		if (equals(macroName, localReplaceList.macroList.at(i).name))
 		{
 			for (int j = 0; j < localReplaceList.macroList.at(i).arguments.size(); j++)
 			{
@@ -109,7 +109,7 @@ string Code::getMacro(string macroName, vector<string>& ArgOrig)
 
 	for (int i = 0; i < replaceList.macroList.size(); i++)
 	{
-		if (boost::equals(macroName, replaceList.macroList.at(i).name))
+		if (equals(macroName, replaceList.macroList.at(i).name))
 		{
 			for (int j = 0; j < replaceList.macroList.at(i).arguments.size(); j++)
 			{

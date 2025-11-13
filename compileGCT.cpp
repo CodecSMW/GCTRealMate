@@ -2,7 +2,7 @@
 
 void compileGCT::compile(char* name)
 {
-	if (boost::filesystem::exists(name))
+	if (std::filesystem::exists(name))
 	{
 		gctName = replaceExtension(name, ".GCT", error);
 		gctTemp = replaceExtension(name, "", error);
@@ -40,7 +40,7 @@ void compileGCT::compile(char* name)
 					{
 						tempVal[i] = currentCode->op.front().retrieveByte(i);
 						if (::provideTXT)
-							::codeset << boost::format("%02X") % unsigned(tempVal[i]);
+							::codeset << std::format("{:02X}", unsigned(tempVal[i]));
 					}
 					GCTgct.write((char *)tempVal, 4); // Roundabout way to force endian regardless of hardware
 					currentCode->op.pop();
@@ -62,13 +62,13 @@ void compileGCT::compile(char* name)
 
 	if (!error)
 	{
-		boost::filesystem::rename(gctTemp, gctName);
+		std::filesystem::rename(gctTemp, gctName);
 	}
 	else
 	{
 		std::cout << "ERROR parsing " << name << "!!" << endl;
 		cin.ignore();
-		boost::filesystem::remove(gctTemp);
+		std::filesystem::remove(gctTemp);
 	}
 }
 
@@ -199,14 +199,14 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 			{
 				if (temp[0] == '!')
 					mode = seekEnabledCode;
-				else if (boost::iequals(temp.substr(0, 6), ".alias"))
+				else if (iequals(temp.substr(0, 6), ".alias"))
 				{
 					if (mode == opCodeMode)
 						compileAlias(temp.substr(6), geckoOps.back(), true);
 					else if (mode != seekEnabledCode)
 						compileAlias(temp.substr(6), geckoOps.back(), false);
 				}
-				else if (boost::iequals(temp.substr(0, 6), ".macro"))
+				else if (iequals(temp.substr(0, 6), ".macro"))
 				{
 					if (mode == opCodeMode)
 						compileMacro(temp.substr(6), geckoOps.back().localReplaceList, currentStream);
@@ -215,10 +215,11 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 					else
 						currentStream->IGNORE('}');
 				}
-				else if (boost::iequals(temp.substr(0, 8), ".include"))
+				else if (iequals(temp.substr(0, 8), ".include"))
 				{
-					boost::erase_all(temp, "\""); //We don't need quotes in the filename.
-					if (streams.size() <= 16 && boost::filesystem::exists(directory + temp.substr(8)))
+
+					erase_all(temp, '\"'); //We don't need quotes in the filename.
+					if (streams.size() <= 16 && std::filesystem::exists(directory + temp.substr(8)))
 					{
 						currentStream = new ifstream;
 						currentStream->open(directory + temp.substr(8));
@@ -268,25 +269,25 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 					int geckoReg[2] = { 0, 0 };
 					int scanOffset = 0;
 					uint32_t tempHex[2] = { 0, 0 };
-					if (boost::iequals(temp.substr(1, 2), "BA") || boost::iequals(temp.substr(1, 2), "PO"))
+					if (iequals(temp.substr(1, 2), "BA") || iequals(temp.substr(1, 2), "PO"))
 					{
 						tempHex[0] = 0x40000000;
-						if (boost::iequals(temp.substr(1, 2), "PO"))
+						if (iequals(temp.substr(1, 2), "PO"))
 							tempHex[0] += 0x8000000;
 						if (temp[3] == '<' && (temp[4] == '-' || temp[4] == '+'))
 						{
 							scanOffset = 5;
-							if (boost::iequals(temp.substr(5, 3), "PO+"))
+							if (iequals(temp.substr(5, 3), "PO+"))
 							{
 								tempHex[0] += 0x10010000;
 								scanOffset += 3;
 							}
-							else if (boost::iequals(temp.substr(5, 3), "BA+"))
+							else if (iequals(temp.substr(5, 3), "BA+"))
 							{
 								tempHex[0] += 0x10000;
 								scanOffset += 3;
 							}
-							if (boost::iequals(temp.substr(scanOffset, 2), "GR"))
+							if (iequals(temp.substr(scanOffset, 2), "GR"))
 							{
 								geckoReg[0] = convCharToHex(temp[scanOffset+2]);
 								tempHex[0] += 0x1000 + geckoReg[0];
@@ -306,17 +307,17 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 						{
 							scanOffset = 5;
 							tempHex[0] += 0x4000000;
-							if (boost::iequals(temp.substr(5, 3), "PO+"))
+							if (iequals(temp.substr(5, 3), "PO+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x10010000;
 							}
-							else if (boost::iequals(temp.substr(5, 3), "BA+"))
+							else if (iequals(temp.substr(5, 3), "BA+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x10000;
 							}
-							if (boost::iequals(temp.substr(scanOffset, 3), "GR"))
+							if (iequals(temp.substr(scanOffset, 3), "GR"))
 							{
 								geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
 								tempHex[0] += 0x1000 + geckoReg[0];
@@ -332,17 +333,17 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 								scanOffset++;
 								tempHex[0] += 0x100000; //+=
 							}
-							if (boost::iequals(temp.substr(5, 3), "PO+"))
+							if (iequals(temp.substr(5, 3), "PO+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x10010000;
 							}
-							else if (boost::iequals(temp.substr(5, 3), "BA+"))
+							else if (iequals(temp.substr(5, 3), "BA+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x10000;
 							}
-							if (boost::iequals(temp.substr(scanOffset, 3), "GR"))
+							if (iequals(temp.substr(scanOffset, 3), "GR"))
 							{
 								geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
 								tempHex[0] += 0x1000 + geckoReg[0];
@@ -356,7 +357,7 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 						geckoOps.back().op.emplace(tempHex[0]);
 						geckoOps.back().op.emplace(tempHex[1]);
 					}
-					else if (boost::iequals(temp.substr(1, 2), "GR"))
+					else if (iequals(temp.substr(1, 2), "GR"))
 					{
 						geckoReg[0] = convCharToHex(temp[3]);
 						if ((temp[5] == '=' && temp[4] != '+') || temp[5] == '<')
@@ -369,7 +370,7 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 								scanOffset++;
 								tempHex[0] += 0x10000;
 							}
-							if (boost::iequals(temp.substr(scanOffset, 2), "GR"))
+							if (iequals(temp.substr(scanOffset, 2), "GR"))
 							{
 								geckoReg[1] = convCharToHex(temp[scanOffset+2]);
 								tempHex[1] = geckoReg[1];
@@ -401,11 +402,11 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 						else if (temp[4] == '=' || temp[4] == '+')
 						{
 							tempHex[0] = 0x80000000 + geckoReg[0];
-							if (boost::iequals(temp.substr(4, 4), "=BA+")) { tempHex[0] += 0x010000;   scanOffset = 8; }
-							else if (boost::iequals(temp.substr(4, 4), "=PO+")) { tempHex[0] += 0x10010000; scanOffset = 8; }
-							else if (boost::iequals(temp.substr(4, 5), "+=BA+")) { tempHex[0] += 0x110000;   scanOffset = 9; }
-							else if (boost::iequals(temp.substr(4, 5), "+=PO+")) { tempHex[0] += 0x10110000; scanOffset = 9; }
-							else if (boost::iequals(temp.substr(4, 2), "+=")) { tempHex[0] += 0x100000;   scanOffset = 6; }
+							if (iequals(temp.substr(4, 4), "=BA+")) { tempHex[0] += 0x010000;   scanOffset = 8; }
+							else if (iequals(temp.substr(4, 4), "=PO+")) { tempHex[0] += 0x10010000; scanOffset = 8; }
+							else if (iequals(temp.substr(4, 5), "+=BA+")) { tempHex[0] += 0x110000;   scanOffset = 9; }
+							else if (iequals(temp.substr(4, 5), "+=PO+")) { tempHex[0] += 0x10110000; scanOffset = 9; }
+							else if (iequals(temp.substr(4, 2), "+=")) { tempHex[0] += 0x100000;   scanOffset = 6; }
 							else if (temp[4] == '=') {scanOffset = 5;}
 							else
 								error = true;
@@ -420,16 +421,16 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 								tempHex[0] = 0x82000000; //82UY - Load into Gecko Register
 							else
 								tempHex[0] = 0x84000000; //84UY - Store Gecko Register at
-							if (boost::iequals(temp.substr(6, 3), "(8)"))
+							if (iequals(temp.substr(6, 3), "(8)"))
 							{
 								scanOffset = 9;
 							}
-							else if (boost::iequals(temp.substr(6,4), "(16)"))
+							else if (iequals(temp.substr(6,4), "(16)"))
 							{
 								scanOffset = 10;
 								tempHex[0] += 0x100000;
 							}
-							else if (boost::iequals(temp.substr(6, 4), "(32)"))
+							else if (iequals(temp.substr(6, 4), "(32)"))
 							{
 							scanOffset = 10;
 							tempHex[0] += 0x200000;
@@ -439,12 +440,12 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 							scanOffset = 6;
 							tempHex[0] += 0x200000;
 							}
-							if (boost::iequals(temp.substr(scanOffset, 3), "BA+"))
+							if (iequals(temp.substr(scanOffset, 3), "BA+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x00010000; //+po
 							}
-							else if (boost::iequals(temp.substr(scanOffset, 3), "PO+"))
+							else if (iequals(temp.substr(scanOffset, 3), "PO+"))
 							{
 								scanOffset += 3;
 								tempHex[0] += 0x10010000; //+po
@@ -459,22 +460,22 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 						geckoOps.back().op.emplace(tempHex[1]);
 
 					}
-					else if (boost::iequals(temp.substr(1, 4), "GOTO"))
+					else if (iequals(temp.substr(1, 4), "GOTO"))
 					{
-					if (boost::iequals(temp.substr(5, 4), "_T->"))
+					if (iequals(temp.substr(5, 4), "_T->"))
 					{
 						geckoOps.back().RequestLabel(temp.substr(9), geckoOps.back().op.size(), 1);
 						geckoOps.back().op.emplace(0x66000000); //6600
 						geckoOps.back().op.emplace(0);
 					}
-					else if (boost::iequals(temp.substr(5, 4), "_F->"))
+					else if (iequals(temp.substr(5, 4), "_F->"))
 					{
 						geckoOps.back().RequestLabel(temp.substr(9), geckoOps.back().op.size(), 1);
 						geckoOps.back().op.emplace(0x66100000); //6610
 						geckoOps.back().op.emplace(0);
 
 					}
-					else if (boost::iequals(temp.substr(5, 2), "->"))
+					else if (iequals(temp.substr(5, 2), "->"))
 					{
 						geckoOps.back().RequestLabel(temp.substr(7), geckoOps.back().op.size(), 1);
 						geckoOps.back().op.emplace(0x66200000); //6620
@@ -485,28 +486,28 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 						cout << "ERROR!!! UNKNOWN GOTO TYPE!" << endl;
 					}
 					}
-					else if (boost::iequals(temp.substr(1, 5), "RESET"))
+					else if (iequals(temp.substr(1, 5), "RESET"))
 					{
 					geckoOps.back().op.emplace(0xE0000000);
 					geckoOps.back().op.emplace(0x80008000);
 					}
-					else if (boost::iequals(temp.substr(1, 5), "ENDIF"))
+					else if (iequals(temp.substr(1, 5), "ENDIF"))
 					{
 					geckoOps.back().op.emplace(0xE2000001);
-					if (boost::iequals(temp.substr(6, 6), "_RESET"))
+					if (iequals(temp.substr(6, 6), "_RESET"))
 						geckoOps.back().op.emplace(0x80008000);
 					else
 						geckoOps.back().op.emplace(0);
 					}
-					else if (boost::iequals(temp.substr(1, 5), "ELSE"))
+					else if (iequals(temp.substr(1, 5), "ELSE"))
 					{
 					geckoOps.back().op.emplace(0xE2100001);
-					if (boost::iequals(temp.substr(6, 6), "_RESET"))
+					if (iequals(temp.substr(6, 6), "_RESET"))
 						geckoOps.back().op.emplace(0x80008000);
 					else
 						geckoOps.back().op.emplace(0);
 					}
-					else if (boost::iequals(temp.substr(1, 5), "END"))
+					else if (iequals(temp.substr(1, 5), "END"))
 					{
 					geckoOps.back().op.emplace(0xF0000000);
 					geckoOps.back().op.emplace(0x00000000);
@@ -529,17 +530,17 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 				}
 				else if (!isJustHex(temp))
 				{
-					if (boost::iequals(temp.substr(0, 5), "pulse") && mode == geckoCodeMode)
+					if (iequals(temp.substr(0, 5), "pulse") && mode == geckoCodeMode)
 					{
 						writeType = hookPulse; dumpRawBytes(rawBytes);
 					}
 					else if ((hasAddress(temp) || hasType(temp)) && mode == geckoCodeMode)
 					{
-						if (boost::iequals(temp.substr(0, 4), "code"))
+						if (iequals(temp.substr(0, 4), "code"))
 						{
 							writeType = hookCode; dumpRawBytes(rawBytes);
 						}
-						else if (boost::iequals(temp.substr(0, 4), "hook"))
+						else if (iequals(temp.substr(0, 4), "hook"))
 						{
 							writeType = hookHook; dumpRawBytes(rawBytes);
 						}
@@ -684,7 +685,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, ifstr
 			break;
 		default: temp += tempchar; tempLine += tempchar;
 		};
-		if (boost::iequals(temp, "op"))
+		if (iequals(temp, "op"))
 		{
 			while (tempchar != '@')
 			{
@@ -780,7 +781,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, strin
 			break;
 		default: temp += tempchar; tempLine += tempchar;
 		};
-		if (boost::iequals(temp, "op"))
+		if (iequals(temp, "op"))
 		{
 			while (tempchar != '@')
 			{
@@ -872,7 +873,7 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 	{
 		for (int i = 0; i < alias.localReplaceList.aliasList.size(); i++)
 		{
-			if (boost::iequals(alias.localReplaceList.aliasList.at(i).aliasName, tempStrings.front()))
+			if (iequals(alias.localReplaceList.aliasList.at(i).aliasName, tempStrings.front()))
 			{
 				alias.localReplaceList.aliasList.at(i).aliasContent = tempStrings.back();
 				return;
@@ -886,7 +887,7 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 	{
 		for (int i = 0; i < alias.replaceList.aliasList.size(); i++)
 		{
-			if (boost::iequals(alias.replaceList.aliasList.at(i).aliasName, tempStrings.front()))
+			if (iequals(alias.replaceList.aliasList.at(i).aliasName, tempStrings.front()))
 			{
 				alias.replaceList.aliasList.at(i).aliasContent = tempStrings.back();
 				return;
@@ -987,14 +988,14 @@ void compileGCT::openMacro(string& line, Code& macroContain, stringstream*& curr
 	{
 		for (int j = 0; j < macroContain.localReplaceList.aliasList.size() && t; j++)
 		{
-			if (boost::iequals(arguments.at(i), macroContain.localReplaceList.aliasList.at(j).aliasName))
+			if (iequals(arguments.at(i), macroContain.localReplaceList.aliasList.at(j).aliasName))
 			{
 				arguments.at(i) = macroContain.localReplaceList.aliasList.at(j).aliasContent; t = 0;  break;
 			}
 		}
 		for (int j = 0; j < macroContain.replaceList.aliasList.size() && t; j++)
 		{
-			if (boost::iequals(arguments.at(i), macroContain.replaceList.aliasList.at(j).aliasName))
+			if (iequals(arguments.at(i), macroContain.replaceList.aliasList.at(j).aliasName))
 			{
 				arguments.at(i) = macroContain.replaceList.aliasList.at(j).aliasContent; t = 0; break;
 			}
@@ -1002,7 +1003,7 @@ void compileGCT::openMacro(string& line, Code& macroContain, stringstream*& curr
 	}
 
 	for (int i = 0; i < argOrig.size(); i++)	// Replace all arguments
-		boost::replace_all(tempMacro, argOrig.at(i), arguments.at(i));
+		replace_all(tempMacro, argOrig.at(i), arguments.at(i));
 
 
 	currentStream = new stringstream;
@@ -1012,13 +1013,13 @@ void compileGCT::openMacro(string& line, Code& macroContain, stringstream*& curr
 
 int compileGCT::seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels)
 {
-	if (boost::iequals(labelName,"%END%"))
+	if (iequals(labelName,"%END%"))
 		return (maxSize - offsetOp) * 4;
-	else if (boost::equals(labelName,"%START%"))
+	else if (equals(labelName,"%START%"))
 		return (0 - offsetOp) * 4;
 	for (int i = 0; i < labels.size(); i++)
 	{
-		if (boost::iequals(labels[i].labelType, labelName))
+		if (iequals(labels[i].labelType, labelName))
 		{
 			return (labels[i].opOffset - offsetOp) * 4;
 		}
@@ -1582,7 +1583,7 @@ int compileGCT::getArraySize(string& line, int& tempOff)
 bool compileGCT::isString(string& line, string comp, int& offset)
 {
 	int tempLength = comp.size();
-	if (boost::iequals(line.substr(offset, tempLength), comp))
+	if (iequals(line.substr(offset, tempLength), comp))
 	{
 		offset += tempLength;
 		return true;
@@ -1592,7 +1593,7 @@ bool compileGCT::isString(string& line, string comp, int& offset)
 bool compileGCT::isString(string& line, string comp)
 {
 	int tempLength = comp.size();
-	if (boost::iequals(line.substr(0, tempLength), comp))
+	if (iequals(line.substr(0, tempLength), comp))
 	{
 		return true;
 	}
@@ -1601,7 +1602,7 @@ bool compileGCT::isString(string& line, string comp)
 
 bool compileGCT::isOp(string& line)
 {
-	return (boost::iequals(line.substr(0, 2), "op"));
+	return (iequals(line.substr(0, 2), "op"));
 }
 
 int compileGCT::convCharToHex(char hexchar)

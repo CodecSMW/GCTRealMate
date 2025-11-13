@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <boost/algorithm/string.hpp>
+#include "utility.h"
 #include "aliasGroup.h"
 
 using namespace std;
