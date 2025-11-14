@@ -1,3 +1,6 @@
-.vs/**
+.vs/
+.cache/
 Debug/
 Release/
+
+build/
