@@ -6,8 +6,8 @@ void compileGCT::compile(const std::filesystem::path& name)
 {
 	if (std::filesystem::exists(name))
 	{
-		gctName = std::filesystem::path(name).replace_extension(".GCT");
-		gctTemp = std::filesystem::path(name).replace_extension("");
+		gctName = std::filesystem::path(name).replace_extension(".GCT").string();
+		gctTemp = std::filesystem::path(name).replace_extension("").string();
 		processLines(name.c_str(), geckoOps, error);
 		GCTgct.open(gctTemp, ios::binary | ios::trunc);
 		functionCount = geckoOps.size();
@@ -81,7 +81,7 @@ compileGCT::compileGCT()
 	error = false;
 }
 
-void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& error)
+void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error)
 {
 
 	textMode mode = seekEnabledCode;
@@ -89,7 +89,7 @@ void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& err
 	char tempchar;
 	uint32_t hookAddress = 0x0;
 	string temp, temp2, tempLine;
-	std::filesystem::path directory(std::filesystem::path(name).parent_path());
+	std::filesystem::path directory(name.parent_path());
 	
 	stack<streamPack> streams;
 	queue<PPCop> operations;
@@ -1691,25 +1691,4 @@ uint8_t compileGCT::charPair2Hex(string& line)
 		}
 	}
 	return temp;
-}
-
-string compileGCT::replaceExtension(const char* name, string extension, bool& error)
-{
-	string temp(name);
-	int offset = -1;
-	for (int i = temp.length() - 1; i >= 0; i--)
-	{
-		if (temp.at(i) == '.')
-		{
-			offset = i; break;
-		}		
-	}
-	if (offset > 0)
-	{
-		temp.resize(offset);
-		temp += extension;
-		return temp;
-	}
-	error = true;
-	return "NULL";
 }

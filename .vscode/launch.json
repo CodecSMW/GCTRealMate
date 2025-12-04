@@ -8,7 +8,8 @@
             "name": "Launch",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/GCTRealMate",
+            "linux":{"program": "${workspaceFolder}/build/GCTRealMate"},
+            "windows":{"program": "${workspaceFolder}/build/GCTRealMate.exe"},
             "args": ["-r", "./RSBE01.txt"],
             "cwd": "${workspaceFolder}"
         },

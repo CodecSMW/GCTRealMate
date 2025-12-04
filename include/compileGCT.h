@@ -52,8 +52,7 @@ class compileGCT
 	bool isString(string& line, string comp, int& offset), isString(string& line, string comp);
 	bool isOp(string& line);
 	int convCharToHex(char hexchar);
-	void processLines(const char* name, queue<Code>& geckoOps, bool& error);
-	string replaceExtension(const char* name, string extension, bool& error);
+	void processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error);
 	void parseLine(string& temp, string& tempLine, textMode& mode, ifstream* currentStream,
 		vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations),
 		 parseLine(string& temp, string& tempLine, textMode& mode, stringstream* currentStream,

@@ -53,7 +53,7 @@ std::filesystem::path attemptPathCaseRepair(const std::filesystem::path& pathIn)
 		{
 			itr--;
 			tempPath.clear();
-			pathUnits.push(*itr);
+			pathUnits.push(itr->string());
 			for (std::filesystem::path::iterator tempItr = beginItr; tempItr != itr; tempItr++) { tempPath /= *tempItr;	}
 			if (std::filesystem::exists(tempPath)) break;
 		}
@@ -66,7 +66,7 @@ std::filesystem::path attemptPathCaseRepair(const std::filesystem::path& pathIn)
 			for (auto currEntry : std::filesystem::directory_iterator(tempPath))
 			{
 				std::filesystem::path::iterator unitName = currEntry.path().end(); unitName--;
-				if ((pathUnits.empty() || currEntry.is_directory()) && iequals(currUnit, *unitName))
+				if ((pathUnits.empty() || currEntry.is_directory()) && iequals(currUnit, unitName->string()))
 				{
 					matchFound = 1;
 					tempPath /= *unitName; 

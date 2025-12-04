@@ -70,7 +70,7 @@ ofstream logFile, codeset;
 			}
 			else
 			{
-				compile.compile(std::filesystem::absolute(argv[i]).c_str());
+				compile.compile(std::filesystem::absolute(argv[i]));
 			}
 		}
 	}
