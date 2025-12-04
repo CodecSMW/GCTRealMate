@@ -12,7 +12,7 @@
 #include "aliasGroup.h"
 
 using namespace std;
-extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage;
+extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, repairPathCase;
 extern ofstream logFile, codeset;
 
 #define ISIT(stringCheck) isString(line,stringCheck,tempOff)
@@ -44,15 +44,16 @@ class compileGCT
 	bool breakLine, error;
 	uint8_t charPair2Hex(string& line);
 	uint32_t addressConvert(string line);
-	bool handleAddressSet(string& line, Code& alias), handleRaw(string& line, queue<uint8_t>& content);
+	bool handleAddressSet(string& line, Code& alias);
+	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);
 	int getArraySize(string& line, int& tempOff), seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels);
 	bool isJustHex(string& line), isCodeName(string& line), hasAddress(string& line), hasType(string& line);
 	bool isString(string& line, string comp, int& offset), isString(string& line, string comp);
 	bool isOp(string& line);
 	int convCharToHex(char hexchar);
-	void processLines(char* name, queue<Code>& geckoOps, bool& error);
-	string replaceExtension(char* name, string extension, bool& error);
+	void processLines(const char* name, queue<Code>& geckoOps, bool& error);
+	string replaceExtension(const char* name, string extension, bool& error);
 	void parseLine(string& temp, string& tempLine, textMode& mode, ifstream* currentStream,
 		vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations),
 		 parseLine(string& temp, string& tempLine, textMode& mode, stringstream* currentStream,
@@ -62,7 +63,7 @@ class compileGCT
 	void openMacro(string& line, Code& macroContain, stringstream*& currentStream);
 public:
 	compileGCT();
-	void compile(char* name);
+	void compile(const std::filesystem::path& name);
 };
 
 #endif
