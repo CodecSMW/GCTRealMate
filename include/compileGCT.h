@@ -26,7 +26,7 @@ class compileGCT
 {
 	struct label { string labelType; int opOffset; };	
 	union streamAmbig { ifstream* fileStream; stringstream* macroStream; };
-	struct streamPack { streamAmbig* streamUnk; bool isMacro; };
+	struct streamPack { streamAmbig* streamUnk; bool isMacro; std::filesystem::path filepath; };
 	enum PSAtype {  IC_Basic = 0x00000000, IC_Bit = 0x01000000, IC_Float = 0x02000000, 
 					LA_Basic = 0x10000000, LA_Bit = 0x11000000, LA_Float = 0x12000000,
 					RA_Basic = 0x20000000, RA_Bit = 0x21000000, RA_Float = 0x22000000};

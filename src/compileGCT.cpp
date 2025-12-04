@@ -98,9 +98,7 @@ void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& err
 	ifstream* currentStream = new ifstream;
 	stringstream* currentMacro = nullptr;
 	currentStream->open(name);
-	streams.emplace();
-	streams.top().streamUnk = (streamAmbig*)currentStream;
-	streams.top().isMacro = false;
+	streams.emplace((streamAmbig*)currentStream, false, name);
 	while (!streams.empty())
 	{
 		if (streams.top().isMacro)
@@ -213,8 +211,16 @@ void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& err
 				else if (iequals(temp.substr(0, 8), ".include"))
 				{
 					erase_all(temp, '\"'); //We don't need quotes in the filename.
+					std::filesystem::path targetFile;
 					std::filesystem::path incomingPath(temp.substr(8));
-					std::filesystem::path targetFile = directory / incomingPath;
+					if (incomingPath.begin()->compare(".") == 0 || incomingPath.begin()->compare("..") == 0)
+					{
+						targetFile = streams.top().filepath.parent_path() / incomingPath;
+					}
+					else
+					{
+						targetFile = directory / incomingPath;
+					}
 					if (!std::filesystem::exists(targetFile) && repairPathCase)
 					{
 						targetFile = attemptPathCaseRepair(targetFile);
@@ -223,9 +229,7 @@ void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& err
 					{
 						currentStream = new ifstream;
 						currentStream->open(targetFile);
-						streams.emplace();
-						streams.top().isMacro = false;
-						streams.top().streamUnk = (streamAmbig*)currentStream;
+						streams.emplace((streamAmbig*)currentStream, false, targetFile);
 						if (::provideLOG)
 						{
 							for (int i = 2; i < streams.size(); i++)
@@ -253,9 +257,7 @@ void compileGCT::processLines(const char* name, queue<Code>& geckoOps, bool& err
 					if (streams.size() <= 32 && mode != seekEnabledCode)
 					{
 						openMacro(temp, geckoOps.back(), currentMacro);
-						streams.emplace();
-						streams.top().isMacro = true;
-						streams.top().streamUnk = (streamAmbig*)currentMacro;
+						streams.emplace((streamAmbig*)currentMacro, true, streams.top().filepath);
 					}
 					else if (mode != seekEnabledCode)
 					{
