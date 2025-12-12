@@ -1026,7 +1026,7 @@ int compileGCT::seekLabelDistance(string labelName, int offsetOp, int maxSize, v
 	}
 	return 0;
 }
-bool compileGCT::handleRaw(string& line, queue<uint8_t>& content)
+void compileGCT::handleRaw(string& line, queue<uint8_t>& content)
 {
 	int arrayCount, tempOff = 0;
 	bool bigEndian, isScalar;
@@ -1139,7 +1139,7 @@ bool compileGCT::handleRaw(string& line, queue<uint8_t>& content)
 	for (int i = 0; i < arrayCount; i++)
 	{
 		if (line[tempOff] != '"')
-			return false;
+			return;
 		else
 			while (line[++tempOff] != '"' && tempOff < line.size())
 				content.push((uint8_t)line[tempOff]);

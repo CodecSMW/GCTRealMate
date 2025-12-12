@@ -44,7 +44,8 @@ class compileGCT
 	bool breakLine, error;
 	uint8_t charPair2Hex(string& line);
 	uint32_t addressConvert(string line);
-	bool handleAddressSet(string& line, Code& alias), handleRaw(string& line, queue<uint8_t>& content);
+	bool handleAddressSet(string& line, Code& alias);
+	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);
 	int getArraySize(string& line, int& tempOff), seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels);
 	bool isJustHex(string& line), isCodeName(string& line), hasAddress(string& line), hasType(string& line);
