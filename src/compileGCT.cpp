@@ -86,16 +86,12 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 	hookMode writeType = notHooked;
 	char tempchar;
 	uint32_t hookAddress = 0x0;
-	string temp, temp2, tempLine, directory(name);
-	for (int i = directory.size() - 1; i >= 0; i--)
-	{
-		if (directory[i] == '\\' || directory[i] == '/')
-		{
-			directory = directory.substr(0, i+1);
-			break;
-		}
-	}
-	
+	string temp, temp2, tempLine;
+
+	string directory =  std::filesystem::path(name).parent_path().string();
+	if (!directory.empty() && directory.back() != '/' && directory.back() != '\\')
+		directory += "/";
+
 	stack<streamPack> streams;
 	queue<PPCop> operations;
 	queue<uint8_t> rawBytes;
@@ -219,10 +215,12 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 				{
 
 					erase_all(temp, '\"'); //We don't need quotes in the filename.
-					if (streams.size() <= 16 && std::filesystem::exists(directory + temp.substr(8)))
+							       
+					std::optional<std::filesystem::path> includePath= findFileIgnoringCase(directory + temp.substr(8));
+					if (streams.size() <= 16 && includePath.has_value())
 					{
 						currentStream = new ifstream;
-						currentStream->open(directory + temp.substr(8));
+						currentStream->open(includePath.value());
 						streams.emplace();
 						streams.top().isMacro = false;
 						streams.top().streamUnk = (streamAmbig*)currentStream;
@@ -642,7 +640,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, ifstr
 			else
 				temp += tempchar; tempLine += tempchar;
 			break;
-		case '\n': case ';': breakLine = true; break; //these dictate to stop reading
+		case '\n': case '\r': case ';': breakLine = true; break; //these dictate to stop reading
 		case '\t': case ' ':  //these get ignored unless in PPCASM mode
 			if (temp != "" && mode == opCodeMode)
 				temp += tempchar;
@@ -741,7 +739,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, strin
 			else
 				temp += tempchar; tempLine += tempchar;
 			break;
-		case '\n': case ';': breakLine = true; break; //these dictate to stop reading
+		case '\n': case '\r': case ';': breakLine = true; break; //these dictate to stop reading
 		case '\t': case ' ':  //these get ignored unless in PPCASM mode
 			if (temp != "" && mode == opCodeMode)
 				temp += tempchar;
