@@ -35,3 +35,31 @@ void replace_all(std::string& str, const std::string& criteria, const std::strin
 		}
 	}
 }
+
+// Try exact path first, then search the containing directory case-insensitively.
+std::optional<std::filesystem::path> findFileIgnoringCase(const std::filesystem::path& filePath) {
+    if (filePath.empty()) {
+        return std::nullopt;
+    }
+
+    if (std::filesystem::exists(filePath)) {
+        return filePath;
+    }
+
+    // Resolve directory and target filename to compare.
+    const std::filesystem::path dir = filePath.has_parent_path() ? filePath.parent_path() : std::filesystem::current_path();
+    const std::string targetName = filePath.filename().string();
+
+    if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+        return std::nullopt;
+    }
+
+    // Scan entries and return the first case-insensitive match.
+    for (const auto& entry : std::filesystem::directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied)) {
+        if (iequals(entry.path().filename().string(), targetName)) {
+            return entry.path();
+        }
+    }
+
+    return std::nullopt;
+}

@@ -5,6 +5,7 @@
 #include <cctype>
 #include <format>
 #include <algorithm>
+#include <optional>
 #include <filesystem>
 
 // Performs case-sensitive comparison between lhs and rhs.
@@ -15,5 +16,6 @@ bool iequals(const std::string& lhs, const std::string& rhs);
 void erase_all(std::string& str, char criteria);
 // Replaces all instances of criteria from str with the provided replacement.
 void replace_all(std::string& str, const std::string& criteria, const std::string& replacement);
+std::optional<std::filesystem::path> findFileIgnoringCase(const std::filesystem::path& filePath);
 
 #endif
