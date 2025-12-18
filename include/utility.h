@@ -15,5 +15,8 @@ bool iequals(const std::string& lhs, const std::string& rhs);
 void erase_all(std::string& str, char criteria);
 // Replaces all instances of criteria from str with the provided replacement.
 void replace_all(std::string& str, const std::string& criteria, const std::string& replacement);
+// Attempts to repair incorrect capitalization in the provided path.
+// Returns the repaired path if successful, or a copy of pathIn if not. 
+std::filesystem::path attemptPathCaseRepair(const std::filesystem::path& pathIn);
 
 #endif

@@ -12,7 +12,7 @@
 #include "aliasGroup.h"
 
 using namespace std;
-extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage;
+extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, repairPathCase;
 extern ofstream logFile, codeset;
 
 #define ISIT(stringCheck) isString(line,stringCheck,tempOff)
@@ -26,7 +26,7 @@ class compileGCT
 {
 	struct label { string labelType; int opOffset; };	
 	union streamAmbig { ifstream* fileStream; stringstream* macroStream; };
-	struct streamPack { streamAmbig* streamUnk; bool isMacro; };
+	struct streamPack { streamAmbig* streamUnk; bool isMacro; std::filesystem::path filepath; };
 	enum PSAtype {  IC_Basic = 0x00000000, IC_Bit = 0x01000000, IC_Float = 0x02000000, 
 					LA_Basic = 0x10000000, LA_Bit = 0x11000000, LA_Float = 0x12000000,
 					RA_Basic = 0x20000000, RA_Bit = 0x21000000, RA_Float = 0x22000000};
@@ -44,15 +44,15 @@ class compileGCT
 	bool breakLine, error;
 	uint8_t charPair2Hex(string& line);
 	uint32_t addressConvert(string line);
-	bool handleAddressSet(string& line, Code& alias), handleRaw(string& line, queue<uint8_t>& content);
+	bool handleAddressSet(string& line, Code& alias);
+	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);
 	int getArraySize(string& line, int& tempOff), seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels);
 	bool isJustHex(string& line), isCodeName(string& line), hasAddress(string& line), hasType(string& line);
 	bool isString(string& line, string comp, int& offset), isString(string& line, string comp);
 	bool isOp(string& line);
 	int convCharToHex(char hexchar);
-	void processLines(char* name, queue<Code>& geckoOps, bool& error);
-	string replaceExtension(char* name, string extension, bool& error);
+	void processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error);
 	void parseLine(string& temp, string& tempLine, textMode& mode, ifstream* currentStream,
 		vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations),
 		 parseLine(string& temp, string& tempLine, textMode& mode, stringstream* currentStream,
@@ -62,7 +62,7 @@ class compileGCT
 	void openMacro(string& line, Code& macroContain, stringstream*& currentStream);
 public:
 	compileGCT();
-	void compile(char* name);
+	void compile(const std::filesystem::path& name);
 };
 
 #endif

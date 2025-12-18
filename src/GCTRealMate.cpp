@@ -9,11 +9,12 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 
 */
 
+#include <filesystem>
 #include <vector>
 #include "compileGCT.h"
 
 using namespace std;
-bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, pressKeyClose;
+bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, pressKeyClose, repairPathCase;
 ofstream logFile, codeset;
 
  int main(int argc, char* argv[])
@@ -26,9 +27,10 @@ ofstream logFile, codeset;
 	::GCTconvert = false;
 	::astUsage = false;
 	::pressKeyClose = true;
+	::repairPathCase = false;
 	if (argc <= 1)
 	{
-		cout << "GCTRealMate Alpha 0.1" << endl;
+		cout << "GCTRealMate Alpha 0.2" << endl;
 		cout << "How to use GCTRealMate." << endl;
 		cout << "Drag the asm or txt file onto the program." << endl;
 		cout << "It will put out a GCT with the filename on the first line of the file or default to RSBE01.GCT, otherwise." << endl;
@@ -62,12 +64,13 @@ ofstream logFile, codeset;
 				case 'p': case 'P': ::preserveOld = true; break;
 				case 'c': case 'C': ::fileCompare = true; break;
 				case 'q': case 'Q': ::pressKeyClose = false; break;
+				case 'r': case 'R': ::repairPathCase = true; break;
 				default: break;
 				};
 			}
 			else
 			{
-				compile.compile(argv[i]);
+				compile.compile(std::filesystem::absolute(argv[i]));
 			}
 		}
 	}

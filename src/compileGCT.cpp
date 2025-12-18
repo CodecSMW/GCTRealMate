@@ -1,12 +1,14 @@
 #include "compileGCT.h"
+#include "utility.h"
+#include <filesystem>
 
-void compileGCT::compile(char* name)
+void compileGCT::compile(const std::filesystem::path& name)
 {
 	if (std::filesystem::exists(name))
 	{
-		gctName = replaceExtension(name, ".GCT", error);
-		gctTemp = replaceExtension(name, "", error);
-		processLines(name, geckoOps, error);
+		gctName = std::filesystem::path(name).replace_extension(".GCT").string();
+		gctTemp = std::filesystem::path(name).replace_extension("").string();
+		processLines(name.c_str(), geckoOps, error);
 		GCTgct.open(gctTemp, ios::binary | ios::trunc);
 		functionCount = geckoOps.size();
 		GCTgct.write((char *)header, 8);
@@ -79,22 +81,15 @@ compileGCT::compileGCT()
 	error = false;
 }
 
-void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
+void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error)
 {
 
 	textMode mode = seekEnabledCode;
 	hookMode writeType = notHooked;
 	char tempchar;
 	uint32_t hookAddress = 0x0;
-	string temp, temp2, tempLine, directory(name);
-	for (int i = directory.size() - 1; i >= 0; i--)
-	{
-		if (directory[i] == '\\' || directory[i] == '/')
-		{
-			directory = directory.substr(0, i+1);
-			break;
-		}
-	}
+	string temp, temp2, tempLine;
+	std::filesystem::path directory(name.parent_path());
 	
 	stack<streamPack> streams;
 	queue<PPCop> operations;
@@ -103,9 +98,7 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 	ifstream* currentStream = new ifstream;
 	stringstream* currentMacro = nullptr;
 	currentStream->open(name);
-	streams.emplace();
-	streams.top().streamUnk = (streamAmbig*)currentStream;
-	streams.top().isMacro = false;
+	streams.emplace((streamAmbig*)currentStream, false, name);
 	while (!streams.empty())
 	{
 		if (streams.top().isMacro)
@@ -217,15 +210,26 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 				}
 				else if (iequals(temp.substr(0, 8), ".include"))
 				{
-
 					erase_all(temp, '\"'); //We don't need quotes in the filename.
-					if (streams.size() <= 16 && std::filesystem::exists(directory + temp.substr(8)))
+					std::filesystem::path targetFile;
+					std::filesystem::path incomingPath(temp.substr(8));
+					if (incomingPath.begin()->compare(".") == 0 || incomingPath.begin()->compare("..") == 0)
+					{
+						targetFile = streams.top().filepath.parent_path() / incomingPath;
+					}
+					else
+					{
+						targetFile = directory / incomingPath;
+					}
+					if (!std::filesystem::exists(targetFile) && repairPathCase)
+					{
+						targetFile = attemptPathCaseRepair(targetFile);
+					}
+					if (streams.size() <= 16 && std::filesystem::exists(targetFile))
 					{
 						currentStream = new ifstream;
-						currentStream->open(directory + temp.substr(8));
-						streams.emplace();
-						streams.top().isMacro = false;
-						streams.top().streamUnk = (streamAmbig*)currentStream;
+						currentStream->open(targetFile);
+						streams.emplace((streamAmbig*)currentStream, false, targetFile);
 						if (::provideLOG)
 						{
 							for (int i = 2; i < streams.size(); i++)
@@ -243,7 +247,7 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 					else
 					{
 						error = true; // ERROR: File Not Found!
-						std::cout << "Could not find file: " << temp.substr(8) << "!!!" << endl;
+						std::cout << "Could not find file: " << targetFile << "!!!" << endl;
 						return;
 					}
 
@@ -253,9 +257,7 @@ void compileGCT::processLines(char* name, queue<Code>& geckoOps, bool& error)
 					if (streams.size() <= 32 && mode != seekEnabledCode)
 					{
 						openMacro(temp, geckoOps.back(), currentMacro);
-						streams.emplace();
-						streams.top().isMacro = true;
-						streams.top().streamUnk = (streamAmbig*)currentMacro;
+						streams.emplace((streamAmbig*)currentMacro, true, streams.top().filepath);
 					}
 					else if (mode != seekEnabledCode)
 					{
@@ -642,7 +644,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, ifstr
 			else
 				temp += tempchar; tempLine += tempchar;
 			break;
-		case '\n': case ';': breakLine = true; break; //these dictate to stop reading
+		case '\r': case '\n': case ';': breakLine = true; break; //these dictate to stop reading
 		case '\t': case ' ':  //these get ignored unless in PPCASM mode
 			if (temp != "" && mode == opCodeMode)
 				temp += tempchar;
@@ -741,7 +743,7 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, strin
 			else
 				temp += tempchar; tempLine += tempchar;
 			break;
-		case '\n': case ';': breakLine = true; break; //these dictate to stop reading
+		case '\r': case '\n': case ';': breakLine = true; break; //these dictate to stop reading
 		case '\t': case ' ':  //these get ignored unless in PPCASM mode
 			if (temp != "" && mode == opCodeMode)
 				temp += tempchar;
@@ -1026,7 +1028,7 @@ int compileGCT::seekLabelDistance(string labelName, int offsetOp, int maxSize, v
 	}
 	return 0;
 }
-bool compileGCT::handleRaw(string& line, queue<uint8_t>& content)
+void compileGCT::handleRaw(string& line, queue<uint8_t>& content)
 {
 	int arrayCount, tempOff = 0;
 	bool bigEndian, isScalar;
@@ -1043,49 +1045,49 @@ bool compileGCT::handleRaw(string& line, queue<uint8_t>& content)
 	bigEndian = (scratch.h[0] == 0x3F) ? true : false;
 	if (ISIT("uint8_t") || ISIT("int8_t") || ISIT("byte"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		for (int i = 0; i < arrayCount; i++)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
 				tempOff++;
-			tempOff++;
+			}
+			content.push(scratch.i);
 		}
-		content.push(scratch.i);
-	}
 	}
 	else if (ISIT("uint16_t") || ISIT("int16_t") || ISIT("half"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		for (int i = 0; i < arrayCount; i++)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
 				tempOff++;
-			tempOff++;
+			}
+			content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
 		}
-		content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
-	}
 	}
 	else if (ISIT("uint32_t") || ISIT("int32_t") || ISIT("int") || ISIT("word"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		for (int i = 0; i < arrayCount; i++)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
 				tempOff++;
-			tempOff++;
+			}
+			content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
+			content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
 		}
-		content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
-		content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
-	}
 	}
 	else if (ISIT("float") || ISIT("scalar"))
 	{
@@ -1114,43 +1116,42 @@ bool compileGCT::handleRaw(string& line, queue<uint8_t>& content)
 	}
 	else if (ISIT("double"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.d = stod(line.substr(tempOff));
-		if (bigEndian)
-			for (int j = 0; j < sizeof(double); j++)
-				content.push(scratch.h[j]);
-		else
-			for (int j = sizeof(double) - 1; j >= 0; j--)
-				content.push(scratch.h[j]);
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		for (int i = 0; i < arrayCount; i++)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
+			scratch.d = stod(line.substr(tempOff));
+			if (bigEndian)
+				for (int j = 0; j < sizeof(double); j++)
+					content.push(scratch.h[j]);
+			else
+				for (int j = sizeof(double) - 1; j >= 0; j--)
+					content.push(scratch.h[j]);
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
 				tempOff++;
-			tempOff++;
+			}
 		}
-	}
-
 	}
 	else if (ISIT("string"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	for (int i = 0; i < arrayCount; i++)
-	{
-		if (line[tempOff] != '"')
-			return false;
-		else
-			while (line[++tempOff] != '"' && tempOff < line.size())
-				content.push((uint8_t)line[tempOff]);
-		content.push(0); //Null character
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		for (int i = 0; i < arrayCount; i++)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
+			if (line[tempOff] != '"')
+				break;
+			else
+				while (line[++tempOff] != '"' && tempOff < line.size())
+					content.push((uint8_t)line[tempOff]);
+			content.push(0); //Null character
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
 				tempOff++;
-			tempOff++;
+			}
 		}
-	}
 	}
 	else if (ISIT("IC_basic") || ISIT("IC_bit") || ISIT("IC_float") ||
 		ISIT("LA_basic") || ISIT("LA_bit") || ISIT("LA_float") ||
@@ -1690,25 +1691,4 @@ uint8_t compileGCT::charPair2Hex(string& line)
 		}
 	}
 	return temp;
-}
-
-string compileGCT::replaceExtension(char* name, string extension, bool& error)
-{
-	string temp(name);
-	int offset = -1;
-	for (int i = temp.length() - 1; i >= 0; i--)
-	{
-		if (temp.at(i) == '.')
-		{
-			offset = i; break;
-		}		
-	}
-	if (offset > 0)
-	{
-		temp.resize(offset);
-		temp += extension;
-		return temp;
-	}
-	error = true;
-	return "NULL";
 }
