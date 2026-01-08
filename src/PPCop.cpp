@@ -150,7 +150,7 @@ void PPCop::showDistance(int offset)
 	}
 
 }
-void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide)
+void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn)
 {
 	int tempOff = 0;
 	vector<string> opPieces;
@@ -168,7 +168,7 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 			if (iequals(opPieces[0].substr(0,4),"byte"))
 				opTypes(opPieces); //word, byte, half
 			else 
-				opBranch(opPieces); break;
+				opBranch(opPieces, opAddrIn); break;
 		case 'c': case 'C':
 			if (iequals(opPieces[0].substr(0, 4), "cntl")) { opMath(opPieces); break; } //count leading zeroes	
 			else if (iequals(opPieces[0].substr(0, 3), "cmp")) { opCompare(opPieces); break; } //compare
@@ -360,7 +360,7 @@ void PPCop::checkBranchCondition(string& opString)
 	}*/
 }
 
-void PPCop::opBranch(vector<string>& vecList)
+void PPCop::opBranch(vector<string>& vecList, uint32_t opAddrIn)
 {
 	int tempOff;
 	value = setOpBeginning(19); opType = bc;
@@ -399,11 +399,19 @@ void PPCop::opBranch(vector<string>& vecList)
 		int i = vecList.size() - 1;
 		if (iequals(vecList[i].substr(0, 2), "0x") || iequals(vecList[i].substr(0, 3), "-0x"))
 		{
-			tempOff = stoi(vecList[i], nullptr, 16);
+			uint32_t unsignedOff = stoul(vecList[i], nullptr, 16);
+			if (opType == b && opAddrIn != UINT32_MAX && vecList[i][0] != '-' && unsignedOff & 0x80000000)
+			{
+				tempOff = int((long long)unsignedOff - (long long)opAddrIn);
+			}
+			else
+			{
+				tempOff = stoi(vecList[i], nullptr, 16);
+			}
 
 			if (opType == b)
 			{
-					value |= ((uint32_t)tempOff) & (uint32_t)0x3FFFFFC;
+				value |= ((uint32_t)tempOff) & (uint32_t)0x3FFFFFC;
 			}
 			else
 			{
@@ -415,8 +423,6 @@ void PPCop::opBranch(vector<string>& vecList)
 			{
 				//value += vecReg(1) * (pow(2, 31 - 13));
 			}
-
-
 		}
 		else
 		{

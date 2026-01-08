@@ -530,7 +530,8 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 			else if (mode == opCodeMode)
 			{
 				operations.emplace();
-				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, geckoOps.back().replaceList);// , geckoOps.back());
+				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, 
+				geckoOps.back().replaceList, (writeType == hookCode) ? hookAddress + ((operations.size() - 1) * 4) : UINT32_MAX);// , geckoOps.back());
 			}
 			else if (!isJustHex(temp))
 			{
@@ -1174,7 +1175,7 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 	if (ISIT("op"))
 	{
 		geckType = 0x4;
-		tempOp.detectOperation(line.substr(tempOff, tempAt - tempOff), alias.localReplaceList, alias.replaceList);
+		tempOp.detectOperation(line.substr(tempOff, tempAt - tempOff), alias.localReplaceList, alias.replaceList, address);
 
 		for (int i = 0; i < 4; i++)
 			content.push(tempOp.retrieveByte(i));
