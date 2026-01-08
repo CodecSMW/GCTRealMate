@@ -53,10 +53,8 @@ class compileGCT
 	bool isOp(string& line);
 	int convCharToHex(char hexchar);
 	void processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error);
-	void parseLine(string& temp, string& tempLine, textMode& mode, ifstream* currentStream,
-		vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations),
-		 parseLine(string& temp, string& tempLine, textMode& mode, stringstream* currentStream,
-			vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations);
+	void parseLine(string& temp, string& tempLine, textMode& mode, istream* currentStream,
+		vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations);
 	void compileAlias(string line, Code& alias, bool isLocal);
 	void compileMacro(string line, aliasGroup& replaceList, ifstream* currentStream);
 	void openMacro(string& line, Code& macroContain, stringstream*& currentStream);
