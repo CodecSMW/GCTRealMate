@@ -76,7 +76,8 @@ public:
 	void errorCheck(bool& error);
 	uint8_t retrieveByte(int byte);
 private:
-	void opBranch(vector<string>& vecList, uint32_t opAddrIn), opConReg(vector<string>& vecList); //b, cr
+	void opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn); // b 
+	void opConReg(vector<string>& vecList); // cr
 	void opLoad(vector<string>& vecList), opStore(vector<string>& vecList), opMath(vector<string>& vecList); 
 	void opMove(vector<string>& vecList), opTrap(vector<string>& vecList), opCompare(vector<string>& vecList);
 	void opRotate(vector<string>& vecList), opFloat(vector<string>& vecList), opPairedSingle(vector<string>& vecList);
