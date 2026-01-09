@@ -397,12 +397,12 @@ void PPCop::opBranch(vector<string>& vecList, uint32_t opAddrIn)
 	if (vecList.size() > 1)
 	{
 		int i = vecList.size() - 1;
-		if (iequals(vecList[i].substr(0, 2), "0x") || iequals(vecList[i].substr(0, 3), "-0x"))
+		if (vecList[i].starts_with("0x") || vecList[i].starts_with("-0x") || vecList[i].starts_with('$'))
 		{
-			uint32_t unsignedOff = stoul(vecList[i], nullptr, 16);
-			if (opType == b && opAddrIn != UINT32_MAX && vecList[i][0] != '-' && unsignedOff & 0x80000000)
+			if (opType == b && opAddrIn != UINT32_MAX && vecList[i].starts_with('$'))
 			{
-				tempOff = int((long long)unsignedOff - (long long)opAddrIn);
+				uint32_t addressIn = stoul(vecList[i].data() + 1, nullptr, 16);
+				tempOff = int((long long)addressIn - (long long)opAddrIn);
 			}
 			else
 			{
