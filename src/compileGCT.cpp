@@ -563,7 +563,8 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 						{
 							if (temp[i] == '@')
 							{
-								hookAddress = addressConvert(temp.substr(i + 2));
+								hookAddress = addressConvert(temp.substr(i + 2), geckoOps.back());
+								break;
 							}
 						}
 					}
@@ -1166,7 +1167,7 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 			break;
 	//if (line[tempAt + 1] != '$')
 	//	return false;
-	address = addressConvert(line.substr(tempAt + 2));
+	address = addressConvert(line.substr(tempAt + 2), alias);
 
 	
 	if (address >= 0x82000000)
@@ -1563,20 +1564,30 @@ bool compileGCT::isJustHex(string& line)
 		return false;
 	return true;
 }
-uint32_t compileGCT::addressConvert(string line)
+uint32_t compileGCT::addressConvert(string line, const Code& alias)
 {
-	uint32_t temp = 0;
-	for (int i = 0; i < 8; i++)
+	uint32_t result = UINT32_MAX;
+
+	for (auto itr = alias.localReplaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.localReplaceList.aliasList.end(); itr++)
 	{
-		temp *= 0x10;
-		if (line[i] >= 'a' && line[i] <= 'f')
-			temp += (line[i] - 'a' + 10);
-		else if (line[i] >= 'A' && line[i] <= 'F')
-			temp += (line[i] - 'A' + 10);
-		else if (line[i] >= '0' && line[i] <= '9')
-			temp += (line[i] - '0');
+		if (equals(itr->aliasName, line))
+		{
+			result = std::stoul(itr->aliasContent,nullptr,10);
+		}
 	}
-	return temp;
+	for (auto itr = alias.replaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.replaceList.aliasList.end(); itr++)
+	{
+		if (equals(itr->aliasName, line))
+		{
+			result = std::stoul(itr->aliasContent,nullptr,10);
+		}
+	}
+	if (result == UINT32_MAX)
+	{
+		result = std::stoul(line.substr(0, 8), nullptr, 16);
+	}
+	
+	return result;
 }
 uint8_t compileGCT::charPair2Hex(string& line)
 {

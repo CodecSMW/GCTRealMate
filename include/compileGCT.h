@@ -43,7 +43,7 @@ class compileGCT
 	int textSize, functionCount, GCTbytes;
 	bool breakLine, error;
 	uint8_t charPair2Hex(string& line);
-	uint32_t addressConvert(string line);
+	uint32_t addressConvert(string line, const Code& alias);
 	bool handleAddressSet(string& line, Code& alias);
 	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);
