@@ -187,283 +187,281 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 				mode = geckoCodeMode;
 			}
 
+			if (temp.empty()) { continue; }
 
-			if (temp != "")
+			if (temp[0] == '!')
 			{
-				if (temp[0] == '!')
-					mode = seekEnabledCode;
-				else if (iequals(temp.substr(0, 6), ".alias"))
+				mode = seekEnabledCode;
+			}
+			else if (iequals(temp.substr(0, 6), ".alias"))
+			{
+				if (mode == opCodeMode)
+					compileAlias(temp.substr(6), geckoOps.back(), true);
+				else if (mode != seekEnabledCode)
+					compileAlias(temp.substr(6), geckoOps.back(), false);
+			}
+			else if (iequals(temp.substr(0, 6), ".macro"))
+			{
+				if (mode == opCodeMode)
+					compileMacro(temp.substr(6), geckoOps.back().localReplaceList, currentStream);
+				else if (mode != seekEnabledCode)
+					compileMacro(temp.substr(6), geckoOps.back().replaceList, currentStream);
+				else
+					currentStream->IGNORE('}');
+			}
+			else if (iequals(temp.substr(0, 8), ".include"))
+			{
+				erase_all(temp, '\"'); //We don't need quotes in the filename.
+				std::filesystem::path targetFile;
+				std::filesystem::path incomingPath(temp.substr(8));
+				if (incomingPath.begin()->compare(".") == 0 || incomingPath.begin()->compare("..") == 0)
 				{
-					if (mode == opCodeMode)
-						compileAlias(temp.substr(6), geckoOps.back(), true);
-					else if (mode != seekEnabledCode)
-						compileAlias(temp.substr(6), geckoOps.back(), false);
+					targetFile = streams.top().filepath.parent_path() / incomingPath;
 				}
-				else if (iequals(temp.substr(0, 6), ".macro"))
+				else
 				{
-					if (mode == opCodeMode)
-						compileMacro(temp.substr(6), geckoOps.back().localReplaceList, currentStream);
-					else if (mode != seekEnabledCode)
-						compileMacro(temp.substr(6), geckoOps.back().replaceList, currentStream);
-					else
-						currentStream->IGNORE('}');
+					targetFile = directory / incomingPath;
 				}
-				else if (iequals(temp.substr(0, 8), ".include"))
+				if (!std::filesystem::exists(targetFile) && repairPathCase)
 				{
-					erase_all(temp, '\"'); //We don't need quotes in the filename.
-					std::filesystem::path targetFile;
-					std::filesystem::path incomingPath(temp.substr(8));
-					if (incomingPath.begin()->compare(".") == 0 || incomingPath.begin()->compare("..") == 0)
+					targetFile = attemptPathCaseRepair(targetFile);
+				}
+				if (streams.size() <= 16 && std::filesystem::exists(targetFile))
+				{
+					currentStream = new ifstream;
+					currentStream->open(targetFile);
+					streams.emplace((streamAmbig*)currentStream, false, targetFile);
+					if (::provideLOG)
 					{
-						targetFile = streams.top().filepath.parent_path() / incomingPath;
-					}
-					else
-					{
-						targetFile = directory / incomingPath;
-					}
-					if (!std::filesystem::exists(targetFile) && repairPathCase)
-					{
-						targetFile = attemptPathCaseRepair(targetFile);
-					}
-					if (streams.size() <= 16 && std::filesystem::exists(targetFile))
-					{
-						currentStream = new ifstream;
-						currentStream->open(targetFile);
-						streams.emplace((streamAmbig*)currentStream, false, targetFile);
-						if (::provideLOG)
+						for (int i = 2; i < streams.size(); i++)
 						{
-							for (int i = 2; i < streams.size(); i++)
-								::logFile << '\t'; //indent each subfile
-							::logFile << temp.substr(8) << endl;
+							::logFile << '\t'; //indent each subfile
 						}
-					}
-					else if (streams.size() > 16)
-					{
-						error = true; // ERROR: Encountered inclusion recursion!
-						std::cout << "WARNING! Inclusions exceeded 16 levels! Recursion assumed." << endl;
-						return;
-					}
-
-					else
-					{
-						error = true; // ERROR: File Not Found!
-						std::cout << "Could not find file: " << targetFile << "!!!" << endl;
-						return;
-					}
-
-				}
-				else if (temp[0] == '%') // Macros!
-				{
-					if (streams.size() <= 32 && mode != seekEnabledCode)
-					{
-						openMacro(temp, geckoOps.back(), currentMacro);
-						streams.emplace((streamAmbig*)currentMacro, true, streams.top().filepath);
-					}
-					else if (mode != seekEnabledCode)
-					{
-						error = true;
-						cout << "WARNING! Macro recursion possible!" << endl;
-						return;
+						::logFile << temp.substr(8) << endl;
 					}
 				}
-				else if (temp[0] == '.') // Gecko Codes
+				else if (streams.size() > 16)
 				{
-					int geckoReg[2] = { 0, 0 };
-					int scanOffset = 0;
-					uint32_t tempHex[2] = { 0, 0 };
-					if (iequals(temp.substr(1, 2), "BA") || iequals(temp.substr(1, 2), "PO"))
+					error = true; // ERROR: Encountered inclusion recursion!
+					std::cout << "WARNING! Inclusions exceeded 16 levels! Recursion assumed." << endl;
+					return;				}
+				else
+				{
+					error = true; // ERROR: File Not Found!
+					std::cout << "Could not find file: " << targetFile << "!!!" << endl;
+					return;				}
+			}
+			else if (temp[0] == '%') // Macros!
+			{
+				if (streams.size() <= 32 && mode != seekEnabledCode)
+				{
+					openMacro(temp, geckoOps.back(), currentMacro);
+					streams.emplace((streamAmbig*)currentMacro, true, streams.top().filepath);
+				}
+				else if (mode != seekEnabledCode)
+				{
+					error = true;
+					cout << "WARNING! Macro recursion possible!" << endl;
+					return;
+				}
+			}
+			else if (temp[0] == '.') // Gecko Codes
+			{
+				int geckoReg[2] = { 0, 0 };
+				int scanOffset = 0;
+				uint32_t tempHex[2] = { 0, 0 };
+				if (iequals(temp.substr(1, 2), "BA") || iequals(temp.substr(1, 2), "PO"))
+				{
+					tempHex[0] = 0x40000000;
+					if (iequals(temp.substr(1, 2), "PO"))
+						tempHex[0] += 0x8000000;
+					if (temp[3] == '<' && (temp[4] == '-' || temp[4] == '+'))
 					{
-						tempHex[0] = 0x40000000;
-						if (iequals(temp.substr(1, 2), "PO"))
-							tempHex[0] += 0x8000000;
-						if (temp[3] == '<' && (temp[4] == '-' || temp[4] == '+'))
+						scanOffset = 5;
+						if (iequals(temp.substr(5, 3), "PO+"))
 						{
-							scanOffset = 5;
-							if (iequals(temp.substr(5, 3), "PO+"))
-							{
-								tempHex[0] += 0x10010000;
-								scanOffset += 3;
-							}
-							else if (iequals(temp.substr(5, 3), "BA+"))
-							{
-								tempHex[0] += 0x10000;
-								scanOffset += 3;
-							}
-							if (iequals(temp.substr(scanOffset, 2), "GR"))
-							{
-								geckoReg[0] = convCharToHex(temp[scanOffset+2]);
-								tempHex[0] += 0x1000 + geckoReg[0];
-								scanOffset += 4;
-							}
-							if (temp[scanOffset] != '$')
-							{
-								tempHex[0] &= 0x08000000;
-								tempHex[0] += 0x46000000;
-								geckoOps.back().RequestLabel(temp.substr(scanOffset), geckoOps.back().op.size());
-								geckoOps.back().op.emplace(tempHex[0]); 
-								geckoOps.back().op.emplace(0);
-								goto GeckoCodeClear;
-							}
+							tempHex[0] += 0x10010000;
+							scanOffset += 3;
 						}
-						else if (temp[3] == '-' && temp[4] == '>')
+						else if (iequals(temp.substr(5, 3), "BA+"))
 						{
-							scanOffset = 5;
-							tempHex[0] += 0x4000000;
-							if (iequals(temp.substr(5, 3), "PO+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x10010000;
-							}
-							else if (iequals(temp.substr(5, 3), "BA+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x10000;
-							}
-							if (iequals(temp.substr(scanOffset, 3), "GR"))
-							{
-								geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
-								tempHex[0] += 0x1000 + geckoReg[0];
-								scanOffset += 4;
-							}
+							tempHex[0] += 0x10000;
+							scanOffset += 3;
 						}
-						else if (temp[3] == '=' || (temp[3] == '+' && temp[4] == '='))
+						if (iequals(temp.substr(scanOffset, 2), "GR"))
 						{
-							scanOffset = 4;
-							tempHex[0] += 0x2000000;
-							if (temp[3] != '=')
-							{
-								scanOffset++;
-								tempHex[0] += 0x100000; //+=
-							}
-							if (iequals(temp.substr(5, 3), "PO+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x10010000;
-							}
-							else if (iequals(temp.substr(5, 3), "BA+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x10000;
-							}
-							if (iequals(temp.substr(scanOffset, 3), "GR"))
-							{
-								geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
-								tempHex[0] += 0x1000 + geckoReg[0];
-								scanOffset += 4;
-							}
+							geckoReg[0] = convCharToHex(temp[scanOffset+2]);
+							tempHex[0] += 0x1000 + geckoReg[0];
+							scanOffset += 4;
 						}
-						if (temp[scanOffset] == '$')
+						if (temp[scanOffset] != '$')
+						{
+							tempHex[0] &= 0x08000000;
+							tempHex[0] += 0x46000000;
+							geckoOps.back().RequestLabel(temp.substr(scanOffset), geckoOps.back().op.size());
+							geckoOps.back().op.emplace(tempHex[0]); 
+							geckoOps.back().op.emplace(0);
+							goto GeckoCodeClear;
+						}
+					}
+					else if (temp[3] == '-' && temp[4] == '>')
+					{
+						scanOffset = 5;
+						tempHex[0] += 0x4000000;
+						if (iequals(temp.substr(5, 3), "PO+"))
+						{
+							scanOffset += 3;
+							tempHex[0] += 0x10010000;
+						}
+						else if (iequals(temp.substr(5, 3), "BA+"))
+						{
+							scanOffset += 3;
+							tempHex[0] += 0x10000;
+						}
+						if (iequals(temp.substr(scanOffset, 3), "GR"))
+						{
+							geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
+							tempHex[0] += 0x1000 + geckoReg[0];
+							scanOffset += 4;
+						}
+					}
+					else if (temp[3] == '=' || (temp[3] == '+' && temp[4] == '='))
+					{
+						scanOffset = 4;
+						tempHex[0] += 0x2000000;
+						if (temp[3] != '=')
+						{
 							scanOffset++;
-						tempHex[1] = (uint32_t)(stoul(temp.substr(scanOffset, 8), nullptr, 16) & 0x7FFFFFFF);
-					
-						geckoOps.back().op.emplace(tempHex[0]);
-						geckoOps.back().op.emplace(tempHex[1]);
-					}
-					else if (iequals(temp.substr(1, 2), "GR"))
-					{
-						geckoReg[0] = convCharToHex(temp[3]);
-						if ((temp[5] == '=' && temp[4] != '+') || temp[5] == '<')
-						{
-							scanOffset = 6;
-							if (temp[5] != '=')
-								tempHex[0] += 0x20000;
-							if (temp[6] == '$')
-							{
-								scanOffset++;
-								tempHex[0] += 0x10000;
-							}
-							if (iequals(temp.substr(scanOffset, 2), "GR"))
-							{
-								geckoReg[1] = convCharToHex(temp[scanOffset+2]);
-								tempHex[1] = geckoReg[1];
-								tempHex[0] += 0x88000000 + geckoReg[0]; //88T - Gecko Register Operations
-							}
-							else
-							{
-								tempHex[1] = (uint32_t)stoul(temp.substr(scanOffset, 8), nullptr, 16);
-								tempHex[1] &= 0x7FFFFFFF;
-								tempHex[0] += 0x86000000 + geckoReg[0]; //86T - Gecko Register / Direct Value Operations
-							}
-							switch (temp[4])
-							{
-							case 'x': tempHex[0] += 0x100000; //fmuls single float multiply
-							case 'a': tempHex[0] += 0x100000; //fadds single float add
-							case ')': tempHex[0] += 0x100000; //arithmetic shift right
-							case '(': tempHex[0] += 0x100000; //rotate left
-							case ']': tempHex[0] += 0x100000; //shift right
-							case '[': tempHex[0] += 0x100000; //shift left
-							case '^': tempHex[0] += 0x100000; //xor
-							case '&': tempHex[0] += 0x100000; //and
-							case '|': tempHex[0] += 0x100000; //or
-							case '*': tempHex[0] += 0x100000; //multiply
-							case '+': default: 			      //add
-								break;
-							}
-
+							tempHex[0] += 0x100000; //+=
 						}
-						else if (temp[4] == '=' || temp[4] == '+')
+						if (iequals(temp.substr(5, 3), "PO+"))
 						{
-							tempHex[0] = 0x80000000 + geckoReg[0];
-							if (iequals(temp.substr(4, 4), "=BA+")) { tempHex[0] += 0x010000;   scanOffset = 8; }
-							else if (iequals(temp.substr(4, 4), "=PO+")) { tempHex[0] += 0x10010000; scanOffset = 8; }
-							else if (iequals(temp.substr(4, 5), "+=BA+")) { tempHex[0] += 0x110000;   scanOffset = 9; }
-							else if (iequals(temp.substr(4, 5), "+=PO+")) { tempHex[0] += 0x10110000; scanOffset = 9; }
-							else if (iequals(temp.substr(4, 2), "+=")) { tempHex[0] += 0x100000;   scanOffset = 6; }
-							else if (temp[4] == '=') {scanOffset = 5;}
-							else
-								error = true;
-							if (temp[scanOffset] == '$')
-								scanOffset++;
+							scanOffset += 3;
+							tempHex[0] += 0x10010000;
+						}
+						else if (iequals(temp.substr(5, 3), "BA+"))
+						{
+							scanOffset += 3;
+							tempHex[0] += 0x10000;
+						}
+						if (iequals(temp.substr(scanOffset, 3), "GR"))
+						{
+							geckoReg[0] = convCharToHex(temp[scanOffset + 2]);
+							tempHex[0] += 0x1000 + geckoReg[0];
+							scanOffset += 4;
+						}
+					}
+					if (temp[scanOffset] == '$')
+					{
+						scanOffset++;
+					}
+					tempHex[1] = (uint32_t)(stoul(temp.substr(scanOffset, 8), nullptr, 16) & 0x7FFFFFFF);
+				
+					geckoOps.back().op.emplace(tempHex[0]);
+					geckoOps.back().op.emplace(tempHex[1]);
+				}
+				else if (iequals(temp.substr(1, 2), "GR"))
+				{
+					geckoReg[0] = convCharToHex(temp[3]);
+					if ((temp[5] == '=' && temp[4] != '+') || temp[5] == '<')
+					{
+						scanOffset = 6;
+						if (temp[5] != '=')
+							tempHex[0] += 0x20000;
+						if (temp[6] == '$')
+						{
+							scanOffset++;
+							tempHex[0] += 0x10000;
+						}
+						if (iequals(temp.substr(scanOffset, 2), "GR"))
+						{
+							geckoReg[1] = convCharToHex(temp[scanOffset+2]);
+							tempHex[1] = geckoReg[1];
+							tempHex[0] += 0x88000000 + geckoReg[0]; //88T - Gecko Register Operations
+						}
+						else
+						{
 							tempHex[1] = (uint32_t)stoul(temp.substr(scanOffset, 8), nullptr, 16);
 							tempHex[1] &= 0x7FFFFFFF;
+							tempHex[0] += 0x86000000 + geckoReg[0]; //86T - Gecko Register / Direct Value Operations
 						}
-						else if ((temp[4] == '<' && temp[5] == '-') || (temp[4] == '-' && temp[5] == '>'))
+						switch (temp[4])
 						{
-							if (temp[4] == '<')
-								tempHex[0] = 0x82000000; //82UY - Load into Gecko Register
-							else
-								tempHex[0] = 0x84000000; //84UY - Store Gecko Register at
-							if (iequals(temp.substr(6, 3), "(8)"))
-							{
-								scanOffset = 9;
-							}
-							else if (iequals(temp.substr(6,4), "(16)"))
-							{
-								scanOffset = 10;
-								tempHex[0] += 0x100000;
-							}
-							else if (iequals(temp.substr(6, 4), "(32)"))
-							{
+						case 'x': tempHex[0] += 0x100000; //fmuls single float multiply
+						case 'a': tempHex[0] += 0x100000; //fadds single float add
+						case ')': tempHex[0] += 0x100000; //arithmetic shift right
+						case '(': tempHex[0] += 0x100000; //rotate left
+						case ']': tempHex[0] += 0x100000; //shift right
+						case '[': tempHex[0] += 0x100000; //shift left
+						case '^': tempHex[0] += 0x100000; //xor
+						case '&': tempHex[0] += 0x100000; //and
+						case '|': tempHex[0] += 0x100000; //or
+						case '*': tempHex[0] += 0x100000; //multiply
+						case '+': default: 			      //add
+							break;						}
+					}
+					else if (temp[4] == '=' || temp[4] == '+')
+					{
+						tempHex[0] = 0x80000000 + geckoReg[0];
+						if (iequals(temp.substr(4, 4), "=BA+")) { tempHex[0] += 0x010000;   scanOffset = 8; }
+						else if (iequals(temp.substr(4, 4), "=PO+")) { tempHex[0] += 0x10010000; scanOffset = 8; }
+						else if (iequals(temp.substr(4, 5), "+=BA+")) { tempHex[0] += 0x110000;   scanOffset = 9; }
+						else if (iequals(temp.substr(4, 5), "+=PO+")) { tempHex[0] += 0x10110000; scanOffset = 9; }
+						else if (iequals(temp.substr(4, 2), "+=")) { tempHex[0] += 0x100000;   scanOffset = 6; }
+						else if (temp[4] == '=') {scanOffset = 5;}
+						else { error = true; }
+						if (temp[scanOffset] == '$')
+						{
+							scanOffset++;
+						}
+						tempHex[1] = (uint32_t)stoul(temp.substr(scanOffset, 8), nullptr, 16);
+						tempHex[1] &= 0x7FFFFFFF;
+					}
+					else if ((temp[4] == '<' && temp[5] == '-') || (temp[4] == '-' && temp[5] == '>'))
+					{
+						if (temp[4] == '<')
+							tempHex[0] = 0x82000000; //82UY - Load into Gecko Register
+						else
+							tempHex[0] = 0x84000000; //84UY - Store Gecko Register at
+						if (iequals(temp.substr(6, 3), "(8)"))
+						{
+							scanOffset = 9;
+						}
+						else if (iequals(temp.substr(6,4), "(16)"))
+						{
+							scanOffset = 10;
+							tempHex[0] += 0x100000;
+						}
+						else if (iequals(temp.substr(6, 4), "(32)"))
+						{
 							scanOffset = 10;
 							tempHex[0] += 0x200000;
-							}
-							else
-							{
+						}
+						else
+						{
 							scanOffset = 6;
 							tempHex[0] += 0x200000;
-							}
-							if (iequals(temp.substr(scanOffset, 3), "BA+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x00010000; //+po
-							}
-							else if (iequals(temp.substr(scanOffset, 3), "PO+"))
-							{
-								scanOffset += 3;
-								tempHex[0] += 0x10010000; //+po
-							}
-							if (temp[scanOffset] == '$')
-								scanOffset++;
-							tempHex[1] = (uint32_t)stoul(temp.substr(scanOffset, 8), nullptr, 16);
-							tempHex[1] &= 0x7FFFFFFF;
 						}
-
-						geckoOps.back().op.emplace(tempHex[0]);
-						geckoOps.back().op.emplace(tempHex[1]);
-
-					}
-					else if (iequals(temp.substr(1, 4), "GOTO"))
-					{
+						if (iequals(temp.substr(scanOffset, 3), "BA+"))
+						{
+							scanOffset += 3;
+							tempHex[0] += 0x00010000; //+po
+						}
+						else if (iequals(temp.substr(scanOffset, 3), "PO+"))
+						{
+							scanOffset += 3;
+							tempHex[0] += 0x10010000; //+po
+						}
+						if (temp[scanOffset] == '$')
+						{
+							scanOffset++;
+						}
+						tempHex[1] = (uint32_t)stoul(temp.substr(scanOffset, 8), nullptr, 16);
+						tempHex[1] &= 0x7FFFFFFF;					}
+					geckoOps.back().op.emplace(tempHex[0]);					geckoOps.back().op.emplace(tempHex[1]);
+				}
+				else if (iequals(temp.substr(1, 4), "GOTO"))
+				{
 					if (iequals(temp.substr(5, 4), "_T->"))
 					{
 						geckoOps.back().RequestLabel(temp.substr(9), geckoOps.back().op.size(), 1);
@@ -473,9 +471,7 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 					else if (iequals(temp.substr(5, 4), "_F->"))
 					{
 						geckoOps.back().RequestLabel(temp.substr(9), geckoOps.back().op.size(), 1);
-						geckoOps.back().op.emplace(0x66100000); //6610
-						geckoOps.back().op.emplace(0);
-
+						geckoOps.back().op.emplace(0x66100000); //6610						geckoOps.back().op.emplace(0);
 					}
 					else if (iequals(temp.substr(5, 2), "->"))
 					{
@@ -487,107 +483,115 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 					{
 						cout << "ERROR!!! UNKNOWN GOTO TYPE!" << endl;
 					}
-					}
-					else if (iequals(temp.substr(1, 5), "RESET"))
-					{
+				}
+				else if (iequals(temp.substr(1, 5), "RESET"))
+				{
 					geckoOps.back().op.emplace(0xE0000000);
 					geckoOps.back().op.emplace(0x80008000);
-					}
-					else if (iequals(temp.substr(1, 5), "ENDIF"))
-					{
+				}
+				else if (iequals(temp.substr(1, 5), "ENDIF"))
+				{
 					geckoOps.back().op.emplace(0xE2000001);
 					if (iequals(temp.substr(6, 6), "_RESET"))
+					{
 						geckoOps.back().op.emplace(0x80008000);
+					}
 					else
+					{
 						geckoOps.back().op.emplace(0);
 					}
-					else if (iequals(temp.substr(1, 5), "ELSE"))
-					{
+				}
+				else if (iequals(temp.substr(1, 5), "ELSE"))
+				{
 					geckoOps.back().op.emplace(0xE2100001);
 					if (iequals(temp.substr(6, 6), "_RESET"))
+					{
 						geckoOps.back().op.emplace(0x80008000);
+					}
 					else
+					{
 						geckoOps.back().op.emplace(0);
 					}
-					else if (iequals(temp.substr(1, 5), "END"))
-					{
+				}
+				else if (iequals(temp.substr(1, 5), "END"))
+				{
 					geckoOps.back().op.emplace(0xF0000000);
 					geckoOps.back().op.emplace(0x00000000);
-					}
+				}
 				GeckoCodeClear:
 				temp = "";
 				tempLine = "";
-				}
-				else if (isJustHex(temp) && mode == geckoCodeMode)
-				{
+			}
+			else if (isJustHex(temp) && mode == geckoCodeMode)
+			{
 				dumpRawBytes(rawBytes);
 				geckoOps.back().op.emplace(temp.substr(0, 8));
-				geckoOps.back().op.emplace(temp.substr(8, 8));
-				}
-
-				else if (mode == opCodeMode)
-				{
+				geckoOps.back().op.emplace(temp.substr(8, 8));			}
+			else if (mode == opCodeMode)
+			{
 				operations.emplace();
-				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, geckoOps.back().replaceList);// , geckoOps.back());
-				}
-				else if (!isJustHex(temp))
-				{
-					if (iequals(temp.substr(0, 5), "pulse") && mode == geckoCodeMode)
-					{
-						writeType = hookPulse; dumpRawBytes(rawBytes);
-					}
-					else if ((hasAddress(temp) || hasType(temp)) && mode == geckoCodeMode)
-					{
-						if (iequals(temp.substr(0, 4), "code"))
-						{
-							writeType = hookCode; dumpRawBytes(rawBytes);
-						}
-						else if (iequals(temp.substr(0, 4), "hook"))
-						{
-							writeType = hookHook; dumpRawBytes(rawBytes);
-						}
-						else if (hasAddress(temp))
-						{
-							dumpRawBytes(rawBytes); handleAddressSet(temp, geckoOps.back());
-						}
-						else
-						{
-							handleRaw(temp, rawBytes);
-
-						}
-						if (writeType != notHooked)
-							for (int i = 0; i < temp.size(); i++)
-								if (temp[i] == '@')
-									hookAddress = addressConvert(temp.substr(i + 2));
-					
-						}
-						else if (!hasAddress(temp))
-						{
-						
-							mode = geckoCodeMode; 
-							writeType = notHooked;
-							geckoOps.emplace(tempLine);  // Creates a new code and sets the name
-							geckoOps.back().ShowName();  // Lets the user see progress in realtime.
-							if (::provideLOG)       // 1 = log of all code names
-							{
-								for (int i = 1; i < streams.size(); i++)
-									::logFile << '\t';
-								::logFile << tempLine << endl;
-							}						
-						}
-					}
-
+				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, 
+				geckoOps.back().replaceList, (writeType == hookCode) ? hookAddress + ((operations.size() - 1) * 4) : UINT32_MAX);// , geckoOps.back());
 			}
-
-
-
+			else if (!isJustHex(temp))
+			{
+				if (iequals(temp.substr(0, 5), "pulse") && mode == geckoCodeMode)
+				{
+					writeType = hookPulse; dumpRawBytes(rawBytes);
+				}
+				else if ((hasAddress(temp) || hasType(temp)) && mode == geckoCodeMode)
+				{
+					if (iequals(temp.substr(0, 4), "code"))
+					{
+						writeType = hookCode; dumpRawBytes(rawBytes);
+					}
+					else if (iequals(temp.substr(0, 4), "hook"))
+					{
+						writeType = hookHook; dumpRawBytes(rawBytes);
+					}
+					else if (hasAddress(temp))
+					{
+						dumpRawBytes(rawBytes); handleAddressSet(temp, geckoOps.back());
+					}
+					else
+					{
+						handleRaw(temp, rawBytes);
+					}
+					if (writeType != notHooked)
+					{
+						for (int i = 0; i < temp.size(); i++)
+						{
+							if (temp[i] == '@')
+							{
+								hookAddress = addressConvert(temp.substr(i + 2), geckoOps.back());
+								break;
+							}
+						}
+					}
+				}
+				else if (!hasAddress(temp))
+				{
+				
+					mode = geckoCodeMode; 
+					writeType = notHooked;
+					geckoOps.emplace(tempLine);  // Creates a new code and sets the name
+					geckoOps.back().ShowName();  // Lets the user see progress in realtime.
+					if (::provideLOG)       // 1 = log of all code names
+					{
+						for (int i = 1; i < streams.size(); i++)
+						{
+							::logFile << '\t';
+						}
+						::logFile << tempLine << endl;
+					}						
+				}
+			}
 		}
 		if (streams.top().isMacro)
 		{
 			streams.pop();
 			delete currentMacro;
 			currentMacro = nullptr;
-
 		}
 		else
 		{
@@ -596,10 +600,9 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 			delete currentStream;
 		}
 	}
-	
 }
 
-void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, ifstream* currentStream,
+void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, istream* currentStream,
 	vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations) 
 {
 	bool breakLine = false;
@@ -684,102 +687,6 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, ifstr
 		case '*':
 			if (temp == "")
 				break;
-			break;
-		default: temp += tempchar; tempLine += tempchar;
-		};
-		if (iequals(temp, "op"))
-		{
-			while (tempchar != '@')
-			{
-				currentStream->get(tempchar);
-				temp += tempchar;
-			}
-		}
-	}
-	// determines behavior upon reaching a line
-}
-void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, stringstream* currentStream,
-	vector<label>& labels, queue<uint8_t>& rawBytes, queue<PPCop>& operations)
-{
-	bool breakLine = false;
-	char tempchar;
-	while (!breakLine)
-	{
-		currentStream->get(tempchar);
-		if (currentStream->eof())
-			break;
-		switch (tempchar)
-		{
-		case '#': breakLine = true;
-		case '|': currentStream->IGNORE('\n'); break;
-		case '"':
-			temp += tempchar; tempLine += tempchar;
-			currentStream->get(tempchar);
-			while (!currentStream->eof() && tempchar != '"')
-			{
-				temp += tempchar; tempLine += tempchar;
-				currentStream->get(tempchar);
-			}
-			temp += tempchar; tempLine += tempchar;
-			break;
-		case '/':
-			if (currentStream->peek() == '*')
-			{
-				currentStream->get();
-				while (!currentStream->eof())
-				{
-					currentStream->IGNORE('*');
-					currentStream->get(tempchar);
-					if (tempchar == '/')
-						break;
-				}
-				breakLine = true;
-			}
-			else if (currentStream->peek() == '/')
-			{
-				currentStream->IGNORE('\n');
-				breakLine = true;
-			}
-			else
-				temp += tempchar; tempLine += tempchar;
-			break;
-		case '\r': case '\n': case ';': breakLine = true; break; //these dictate to stop reading
-		case '\t': case ' ':  //these get ignored unless in PPCASM mode
-			if (temp != "" && mode == opCodeMode)
-				temp += tempchar;
-			tempLine += tempchar;
-		case '*':
-			break;
-		case '{':
-			if (mode == seekEnabledCode)	// skip code if looking for a code name when this code is disabled!
-				currentStream->IGNORE('}');
-			else if (mode == geckoCodeMode)
-				mode = opCodeMode;
-			break;
-		case '}':
-			if (mode == opCodeMode)
-				mode = finishOpCodeMode;
-			breakLine = true;
-			break;
-		case ':':
-			switch (mode)
-			{
-			case(opCodeMode):
-				labels.emplace_back();
-				labels.back().labelType = temp;
-				labels.back().opOffset = operations.size();
-				temp = "";
-				break;
-			case(geckoCodeMode):
-				dumpRawBytes(rawBytes);
-				geckoOps.back().labelList.emplace_back();
-				geckoOps.back().labelList.back().labelType = temp;
-				geckoOps.back().labelList.back().opOffset = geckoOps.back().op.size();
-				temp = "";
-				break;
-			default:
-				temp += tempchar; tempLine += tempchar; break;
-			}
 			break;
 		default: temp += tempchar; tempLine += tempchar;
 		};
@@ -1260,7 +1167,7 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 			break;
 	//if (line[tempAt + 1] != '$')
 	//	return false;
-	address = addressConvert(line.substr(tempAt + 2));
+	address = addressConvert(line.substr(tempAt + 2), alias);
 
 	
 	if (address >= 0x82000000)
@@ -1269,7 +1176,7 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 	if (ISIT("op"))
 	{
 		geckType = 0x4;
-		tempOp.detectOperation(line.substr(tempOff, tempAt - tempOff), alias.localReplaceList, alias.replaceList);
+		tempOp.detectOperation(line.substr(tempOff, tempAt - tempOff), alias.localReplaceList, alias.replaceList, address);
 
 		for (int i = 0; i < 4; i++)
 			content.push(tempOp.retrieveByte(i));
@@ -1290,90 +1197,90 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 	}
 	else if (ISIT("address"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	switch (arrayCount)
-	{
-	case 1: geckType = 0x4; break;
-	default: geckType = 0x6;
-	}
-	for (int i = 0; i < arrayCount; i++)
-	{
-		if (line[tempOff] == '$')
-			tempOff++;
-		scratch.i = (uint32_t)stoul(line.substr(tempOff), nullptr, 16);
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		switch (arrayCount)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
-				tempOff++;
-			tempOff++;
+		case 1: geckType = 0x4; break;
+		default: geckType = 0x6;
 		}
-		content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
-		content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
-	}
+		for (int i = 0; i < arrayCount; i++)
+		{
+			if (line[tempOff] == '$')
+				tempOff++;
+			scratch.i = (uint32_t)stoul(line.substr(tempOff), nullptr, 16);
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
+				tempOff++;
+			}
+			content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
+			content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
+		}
 	}
 	else if (ISIT("uint8_t") || ISIT("int8_t") || ISIT("byte"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	switch (arrayCount)
-	{
-	case 1: geckType = 0x0; content.push(0); content.push(0); content.push(0); break;
-	case 2: geckType = 0x2; content.push(0); content.push(0); break;
-	case 4: geckType = 0x4; break;
-	default: geckType = 0x6;
-	}
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		switch (arrayCount)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
-				tempOff++;
-			tempOff++;
+		case 1: geckType = 0x0; content.push(0); content.push(0); content.push(0); break;
+		case 2: geckType = 0x2; content.push(0); content.push(0); break;
+		case 4: geckType = 0x4; break;
+		default: geckType = 0x6;
 		}
-		content.push(scratch.i);
-	}
+		for (int i = 0; i < arrayCount; i++)
+		{
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
+				tempOff++;
+			}
+			content.push(scratch.i);
+		}
 	}
 	else if (ISIT("uint16_t") || ISIT("int16_t") || ISIT("half"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	switch (arrayCount)
-	{
-	case 1: geckType = 0x2; content.push(0); content.push(0); break;
-	case 2: geckType = 0x4; break;
-	default: geckType = 0x6;
-	}
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		switch (arrayCount)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
-				tempOff++;
-			tempOff++;
+		case 1: geckType = 0x2; content.push(0); content.push(0); break;
+		case 2: geckType = 0x4; break;
+		default: geckType = 0x6;
 		}
-		content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
-	}
+		for (int i = 0; i < arrayCount; i++)
+		{
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
+				tempOff++;
+			}
+			content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
+		}
 	}
 	else if (ISIT("uint32_t") || ISIT("int32_t") || ISIT("int") || ISIT("word"))
 	{
-	arrayCount = getArraySize(line, tempOff);
-	switch (arrayCount)
-	{
-	case 1: geckType = 0x4; break;
-	default: geckType = 0x6;
-	}
-	for (int i = 0; i < arrayCount; i++)
-	{
-		scratch.i = STOI_;
-		if (i + 1 < arrayCount)
+		arrayCount = getArraySize(line, tempOff);
+		switch (arrayCount)
 		{
-			while (line[tempOff] != ',' && tempOff < line.size() - 1)
-				tempOff++;
-			tempOff++;
+		case 1: geckType = 0x4; break;
+		default: geckType = 0x6;
 		}
-		content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
-		content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
-	}
+		for (int i = 0; i < arrayCount; i++)
+		{
+			scratch.i = STOI_;
+			if (i + 1 < arrayCount)
+			{
+				while (line[tempOff] != ',' && tempOff < line.size() - 1)
+					tempOff++;
+				tempOff++;
+			}
+			content.push((scratch.i & 0xFF000000) / 0x1000000); content.push((scratch.i & 0xFF0000) / 0x10000);
+			content.push((scratch.i & 0xFF00) / 0x100); content.push(scratch.i & 0xFF);
+		}
 	}
 	else if (ISIT("float") || ISIT("scalar"))
 	{
@@ -1657,20 +1564,30 @@ bool compileGCT::isJustHex(string& line)
 		return false;
 	return true;
 }
-uint32_t compileGCT::addressConvert(string line)
+uint32_t compileGCT::addressConvert(string line, const Code& alias)
 {
-	uint32_t temp = 0;
-	for (int i = 0; i < 8; i++)
+	uint32_t result = UINT32_MAX;
+
+	for (auto itr = alias.localReplaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.localReplaceList.aliasList.end(); itr++)
 	{
-		temp *= 0x10;
-		if (line[i] >= 'a' && line[i] <= 'f')
-			temp += (line[i] - 'a' + 10);
-		else if (line[i] >= 'A' && line[i] <= 'F')
-			temp += (line[i] - 'A' + 10);
-		else if (line[i] >= '0' && line[i] <= '9')
-			temp += (line[i] - '0');
+		if (equals(itr->aliasName, line))
+		{
+			result = std::stoul(itr->aliasContent,nullptr,10);
+		}
 	}
-	return temp;
+	for (auto itr = alias.replaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.replaceList.aliasList.end(); itr++)
+	{
+		if (equals(itr->aliasName, line))
+		{
+			result = std::stoul(itr->aliasContent,nullptr,10);
+		}
+	}
+	if (result == UINT32_MAX)
+	{
+		result = std::stoul(line.substr(0, 8), nullptr, 16);
+	}
+	
+	return result;
 }
 uint8_t compileGCT::charPair2Hex(string& line)
 {

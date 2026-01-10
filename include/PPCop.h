@@ -67,7 +67,7 @@ public:
 	PPCop(uint32_t setHex), PPCop(string setString), PPCop();
 	operation opType;
 	string labelRequest = "";
-	void detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide);
+	void detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn = UINT32_MAX);
 	void showDistance(int offset);
 	uint32_t init(string& operation);
 	void set(string hex);
@@ -76,7 +76,8 @@ public:
 	void errorCheck(bool& error);
 	uint8_t retrieveByte(int byte);
 private:
-	void opBranch(vector<string>& vecList), opConReg(vector<string>& vecList); //b, cr
+	void opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn); // b 
+	void opConReg(vector<string>& vecList); // cr
 	void opLoad(vector<string>& vecList), opStore(vector<string>& vecList), opMath(vector<string>& vecList); 
 	void opMove(vector<string>& vecList), opTrap(vector<string>& vecList), opCompare(vector<string>& vecList);
 	void opRotate(vector<string>& vecList), opFloat(vector<string>& vecList), opPairedSingle(vector<string>& vecList);

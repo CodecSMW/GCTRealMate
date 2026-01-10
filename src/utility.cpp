@@ -1,7 +1,10 @@
 #include "utility.h"
+#include <cctype>
+#include <cstddef>
 #include <stack>
 #include <iostream>
 #include <filesystem>
+#include <string_view>
 
 bool noCaseEquals(char lhs, char rhs)
 {
@@ -11,13 +14,21 @@ bool caseEquals(char lhs, char rhs)
 {
     return lhs == rhs;
 }
-bool equals(const std::string& lhs, const std::string& rhs)
+bool equals(std::string_view lhs, std::string_view rhs)
 {
     return (lhs.size() != rhs.size()) ? false : std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), caseEquals);
 }
-bool iequals(const std::string& lhs, const std::string& rhs)
+bool iequals(std::string_view lhs, std::string_view rhs)
 {
     return (lhs.size() != rhs.size()) ? false : std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), noCaseEquals);
+}
+bool begins_with(std::string_view lhs, std::string_view rhs)
+{
+	return equals(lhs.substr(0, rhs.size()), rhs);
+}
+bool ibegins_with(std::string_view lhs, std::string_view rhs)
+{
+	return iequals(lhs.substr(0, rhs.size()), rhs);
 }
 void erase_all(std::string& str, char criteria)
 {
@@ -81,4 +92,52 @@ std::filesystem::path attemptPathCaseRepair(const std::filesystem::path& pathIn)
 	}
 	return result;
 }
+std::vector<std::string_view> tokenizeString(std::string_view str, std::string_view whitespaceDelimiters, std::string_view symbolDelimiters, bool respectQuoteBoundaries)
+{
+	std::vector<std::string_view> result{};
+	
+	std::size_t currTokenBegin = str.find_first_not_of(whitespaceDelimiters);
+	while (currTokenBegin < str.size())
+	{
+		std::size_t tokenLength = 0;
+		std::size_t delimLength = 0;
+		
+		std::size_t nextSymbolDelim = str.find_first_of(symbolDelimiters, currTokenBegin);
+		std::size_t nextWhitespaceDelim = str.find_first_of(whitespaceDelimiters, currTokenBegin);
+		
+		std::size_t nextDelim = std::min(nextSymbolDelim, nextWhitespaceDelim);
+		if (nextDelim > currTokenBegin)
+		{
+			if (respectQuoteBoundaries && str[currTokenBegin] == '\"')
+			{
+				std::size_t closingQuoteLoc = currTokenBegin;
+				do 
+				{
+					closingQuoteLoc = str.find_first_of('\"', closingQuoteLoc + 1);
+				} while (closingQuoteLoc != std::string::npos && str[closingQuoteLoc - 1] == '\\');
 
+				if (closingQuoteLoc != std::string::npos)
+				{
+					tokenLength = 2 + result.emplace_back(str.substr(currTokenBegin + 1, closingQuoteLoc - (currTokenBegin + 1))).size();
+				}
+			}
+			if (tokenLength == 0)
+			{
+				tokenLength = result.emplace_back(str.substr(currTokenBegin, nextDelim - currTokenBegin)).size();
+			}
+		}
+		
+		if (nextSymbolDelim < nextWhitespaceDelim)
+		{
+			delimLength = result.emplace_back(str.substr(nextDelim, str.find_first_not_of(symbolDelimiters, nextDelim) - nextDelim)).size();
+		}
+		else if (nextWhitespaceDelim < nextSymbolDelim)
+		{
+			result.emplace_back(str.substr(nextWhitespaceDelim, 0));
+			delimLength = str.find_first_not_of(whitespaceDelimiters, nextWhitespaceDelim) - nextWhitespaceDelim;
+		}
+
+		currTokenBegin += tokenLength + delimLength;
+	}
+	return result;
+}
