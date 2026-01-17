@@ -150,7 +150,7 @@ void PPCop::showDistance(int offset)
 	}
 
 }
-void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide)
+void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn)
 {
 	int tempOff = 0;
 	vector<string> opPieces;
@@ -168,7 +168,7 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 			if (iequals(opPieces[0].substr(0,4),"byte"))
 				opTypes(opPieces); //word, byte, half
 			else 
-				opBranch(opPieces); break;
+				opBranch(opPieces, parentCodeLocal, parentCodeWide, opAddrIn); break;
 		case 'c': case 'C':
 			if (iequals(opPieces[0].substr(0, 4), "cntl")) { opMath(opPieces); break; } //count leading zeroes	
 			else if (iequals(opPieces[0].substr(0, 3), "cmp")) { opCompare(opPieces); break; } //compare
@@ -360,7 +360,7 @@ void PPCop::checkBranchCondition(string& opString)
 	}*/
 }
 
-void PPCop::opBranch(vector<string>& vecList)
+void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn)
 {
 	int tempOff;
 	value = setOpBeginning(19); opType = bc;
@@ -397,13 +397,40 @@ void PPCop::opBranch(vector<string>& vecList)
 	if (vecList.size() > 1)
 	{
 		int i = vecList.size() - 1;
-		if (iequals(vecList[i].substr(0, 2), "0x") || iequals(vecList[i].substr(0, 3), "-0x"))
+		if (vecList[i].starts_with("0x") || vecList[i].starts_with("-0x") || vecList[i].starts_with('$'))
 		{
-			tempOff = stoi(vecList[i], nullptr, 16);
+			if (opType == b && opAddrIn != UINT32_MAX && vecList[i].starts_with('$'))
+			{
+				std::string_view argumentView = std::string_view(vecList[i]).substr(1);
+				uint32_t addressIn = UINT32_MAX;
+				for (auto itr = parentCodeLocal.aliasList.begin(); addressIn == UINT32_MAX && itr != parentCodeLocal.aliasList.end(); itr++)
+				{
+					if (equals(itr->aliasName, argumentView))
+					{
+						addressIn = std::stoul(itr->aliasContent,nullptr,10);
+					}
+				}
+				for (auto itr = parentCodeWide.aliasList.begin(); addressIn == UINT32_MAX && itr != parentCodeWide.aliasList.end(); itr++)
+				{
+					if (equals(itr->aliasName, argumentView))
+					{
+						addressIn = std::stoul(itr->aliasContent,nullptr,10);
+					}
+				}
+				if (addressIn == UINT32_MAX)
+				{
+					addressIn = std::stoul(vecList[i].data() + 1, nullptr, 16);
+				}
+				tempOff = int((long long)addressIn - (long long)opAddrIn);
+			}
+			else
+			{
+				tempOff = stoi(vecList[i], nullptr, 16);
+			}
 
 			if (opType == b)
 			{
-					value |= ((uint32_t)tempOff) & (uint32_t)0x3FFFFFC;
+				value |= ((uint32_t)tempOff) & (uint32_t)0x3FFFFFC;
 			}
 			else
 			{
@@ -415,8 +442,6 @@ void PPCop::opBranch(vector<string>& vecList)
 			{
 				//value += vecReg(1) * (pow(2, 31 - 13));
 			}
-
-
 		}
 		else
 		{
