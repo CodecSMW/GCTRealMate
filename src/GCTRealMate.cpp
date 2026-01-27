@@ -28,13 +28,13 @@ ofstream logFile, codeset;
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
+	cout << "GCTRealMate v0.2.0" << endl;
 	if (argc <= 1)
 	{
-		cout << "GCTRealMate Alpha 0.2" << endl;
 		cout << "How to use GCTRealMate." << endl;
 		cout << "Drag the asm or txt file onto the program." << endl;
 		cout << "It will put out a GCT with the filename on the first line of the file or default to RSBE01.GCT, otherwise." << endl;
-		cout << "Comments can be written with # or \\ \\, hooks can be written with HOOK and codes written directly can use CODE." << endl;
+		cout << "Comments can be written with # or \\\\, hooks can be written with HOOK and codes written directly can use CODE." << endl;
 		cout << "Types uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t and float are supported." << endl;
 	}
 	else
