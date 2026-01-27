@@ -12,3 +12,4 @@ Additionally, GCTRM accepts a handful of extra arguments to affect its output:
 | "-t" | Produces a `codeset.txt` file, including each assembled code and its raw hex contents.                     |
 | "-*" | Inserts asterisks in front of each line of raw hex in the generated `codeset.txt` file.                    |
 | "-g" | Prints "RSBE01" at the top of the codeset.txt file, in order to provide a codeset that GCTconvert can use. |
+| "-r" | Enables attempts to resolve incorrect capitalization in `.include` filepath arguments (Linux only).        |
