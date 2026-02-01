@@ -1418,7 +1418,6 @@ bool compileGCT::handleAddressSet(string& line, Code& alias)
 		geckoOps.back().op.push(tempOp);
 		tempOp.setDirect(address); geckoOps.back().op.push(tempOp);
 		tempOp.setDirect(geckType * 0x1000000); geckoOps.back().op.push(tempOp);
-		tempOp.setDirect(writeLength); geckoOps.back().op.push(tempOp);
 	}
 	else
 	{
