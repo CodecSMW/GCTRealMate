@@ -28,7 +28,7 @@ ofstream logFile, codeset;
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
-	cout << "GCTRealMate v0.2.0" << endl;
+	cout << "GCTRealMate v0.2.1" << endl;
 	if (argc <= 1)
 	{
 		cout << "How to use GCTRealMate." << endl;
