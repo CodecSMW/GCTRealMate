@@ -697,18 +697,56 @@ void PPCop::opMath(vector<string>& vecList)
 
 	}
 }
+
+uint32_t getSpRegID(std::string_view spRegStr)
+{
+	uint32_t spRegNumber = UINT32_MAX;
+	uint32_t subNumberIndex = UINT32_MAX;
+	if (iequals(spRegStr, "xer")) { spRegNumber = 1; }
+	else if (iequals(spRegStr, "lr")) { spRegNumber = 8; }
+	else if (iequals(spRegStr, "ctr")) { spRegNumber = 9; }
+	else if (ibegins_with(spRegStr, "srr"))
+	{ 
+		spRegNumber = 26;
+		subNumberIndex = 3;
+	}
+	else if (ibegins_with(spRegStr, "sprg"))
+	{
+		spRegNumber = 272;
+		subNumberIndex = 4;
+	}
+	else if (ibegins_with(spRegStr, "ibat"))
+	{
+		spRegNumber = 528;
+		subNumberIndex = 4;
+	}
+	else if (ibegins_with(spRegStr, "dbat"))
+	{
+		spRegNumber = 536;
+		subNumberIndex = 4;
+	}
+	else if (ibegins_with(spRegStr, "spr"))
+	{
+		spRegNumber = 0;
+		subNumberIndex = 3;
+	}
+	if (spRegNumber != UINT32_MAX && subNumberIndex != UINT32_MAX)
+	{
+		spRegNumber += stoi(spRegStr.substr(subNumberIndex).data());
+	}
+
+	return spRegNumber;
+}
+
 void PPCop::opMove(vector<string>& vecList)
 {
 	value = setOpBeginning(31);
 	if (ISOP("mtspr"))	//Move To Special Purpose Register X-Form
 	{
 		value += 467 * 2;
-		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
-			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
-			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
-			value += setBTBABB(regClean(vecList[1]), 1, 0);
+		uint32_t gprNumber = regClean(vecList[2]);
+		uint32_t spRegNumber = getSpRegID(vecList[1]);
+		value += setBTBABB(gprNumber,spRegNumber & 0b11111, (spRegNumber >> 5) & 0b11111);
 	}
 	else if (ISOP("mtlr"))	value += 467 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move To Link Register
 	else if (ISOP("mtctr"))	value += 467 * 2 + setBTBABB(regClean(vecList[1]), 9, 0);		//Move To Count Register
@@ -716,12 +754,9 @@ void PPCop::opMove(vector<string>& vecList)
 	else if (ISOP("mfspr"))
 	{
 		value += 339 * 2;
-		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
-			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
-			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
-			value += setBTBABB(regClean(vecList[1]), 1, 0);;
+		uint32_t gprNumber = regClean(vecList[1]);
+		uint32_t spRegNumber = getSpRegID(vecList[2]);
+		value += setBTBABB(gprNumber,spRegNumber & 0b11111, (spRegNumber >> 5) & 0b11111);
 	}
 	else if (ISOP("mflr"))	value += 339 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move From Link Register
 	else if (ISOP("mfctr"))	value += 339 * 2 + setBTBABB(regClean(vecList[1]), 9, 0);		//Move From Count Register
