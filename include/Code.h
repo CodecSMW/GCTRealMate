@@ -21,6 +21,7 @@ private:
 	struct label { string labelType; int opOffset; };
 	struct labelSeek { string labelType; int opOffset; int insertMode; };
 	queue<error> errorList;
+	uint32_t gctPos;
 public:
 	aliasGroup replaceList, localReplaceList;
 	list<labelSeek> labelFillList;
@@ -28,7 +29,7 @@ public:
 	list<label> labelList;
 	queue<PPCop> op;
 
-	Code(string nameInit);
+	Code(string nameInit, uint32_t gctPosIn);
 	~Code();
 
 	bool Errors();
@@ -40,6 +41,8 @@ public:
 	void FoundError(errorNo errorID, string context);
 	void findAliases(string& comparedString, bool& foundVal);
 	string getMacro(string macroName, vector<string>& ArgOrig);
+	uint32_t getLen();
+	uint32_t getGctPos();
 private:
 	void ErrorContext(error errorType);
 };

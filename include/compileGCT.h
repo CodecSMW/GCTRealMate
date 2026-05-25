@@ -12,6 +12,7 @@
 #include "aliasGroup.h"
 
 using namespace std;
+extern uint32_t codesetBaseAddress;
 extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, repairPathCase;
 extern ofstream logFile, codeset;
 
