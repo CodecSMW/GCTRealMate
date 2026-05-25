@@ -83,6 +83,7 @@ private:
 	void opRotate(vector<string>& vecList), opFloat(vector<string>& vecList), opPairedSingle(vector<string>& vecList);
 	void opInst(vector<string>& vecList);
 	void opTypes(vector<string>& vecList), psaTypes(vector<string>& vecList, int access);
+	void opRetFromInt(vector<string>& vecList);
 	/*todo: 
 	sc
 	mcrf, mcrfs, mtfsfi, mtfsf, mtfsb0, mtfsb1, mtocrf, mfocrf

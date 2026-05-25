@@ -219,6 +219,7 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 		case 'p': case 'P':
 			opPairedSingle(opPieces); break; //ps
 		case 'r': case 'R':
+		{
 			if (iequals(opPieces[0].substr(0, 2), "RA"))
 			{
 				if (iequals(opPieces[0].substr(2, 6), "_basic"))
@@ -229,14 +230,24 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 					psaTypes(opPieces, 0x22000000);
 				else
 					badOp = ((int32_t)value == -1);
-				break;
 			}
-			opRotate(opPieces); break; //rot, rl
+			else if (iequals(opPieces[0], "rfi"))
+			{
+				opRetFromInt(opPieces);
+			}
+			else
+			{
+				opRotate(opPieces); //rot, rl
+			}
+			break;
+		}
 		case 's': case 'S':
+		{
 			if (iequals(opPieces[0].substr(0, 3), "sub")) {opMath(opPieces); break;} //sub	
 			else if (iequals(opPieces[0].substr(0, 2), "st")) { opStore(opPieces); break; } //store
 			else if (iequals(opPieces[0].substr(0, 6), "scalar")) { opTypes(opPieces); break; } //scalar 
 			else { opRotate(opPieces); break; } //shift		
+		}
 		case 't': case 'T':
 			opTrap(opPieces); break;
 		case 'w': case 'W': case 'h': case 'H':
@@ -941,4 +952,8 @@ void PPCop::opTrap(vector<string>& vecList)
 	else if (ISOP("twi"))	value = setOpBeginning(3) + incTORASI;				//Trap Word Immediate D-Form
 	else if (ISOP("td"))	value = setOpBeginning(31) + 68 * 2 + incTORARB;	//Trap Doubleword X-Form
 	else if (ISOP("tw"))	value = setOpBeginning(31) +  4 * 2 + incTORARB;	//Trap Word X-Form
+}
+void PPCop::opRetFromInt(vector<string>& vecList)
+{
+	if (ISOP("rfi")) value = 0x4C000064; // Return From Interrupt
 }
