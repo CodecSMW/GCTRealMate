@@ -716,6 +716,7 @@ uint32_t getSpRegID(std::string_view spRegStr)
 	if (iequals(spRegStr, "xer")) { spRegNumber = 1; }
 	else if (iequals(spRegStr, "lr")) { spRegNumber = 8; }
 	else if (iequals(spRegStr, "ctr")) { spRegNumber = 9; }
+	else if (iequals(spRegStr, "dar")) { spRegNumber = 19; }
 	else if (ibegins_with(spRegStr, "srr"))
 	{ 
 		spRegNumber = 26;
@@ -726,20 +727,28 @@ uint32_t getSpRegID(std::string_view spRegStr)
 		spRegNumber = 272;
 		subNumberIndex = 4;
 	}
-	else if (ibegins_with(spRegStr, "ibat"))
+	else if (ibegins_with(spRegStr, "gqr"))
 	{
-		spRegNumber = 528;
-		subNumberIndex = 4;
-	}
-	else if (ibegins_with(spRegStr, "dbat"))
-	{
-		spRegNumber = 536;
-		subNumberIndex = 4;
+		spRegNumber = 912;
+		subNumberIndex = 3;
 	}
 	else if (ibegins_with(spRegStr, "spr"))
 	{
 		spRegNumber = 0;
 		subNumberIndex = 3;
+	}
+	else if (ibegins_with(spRegStr, "ibat") || ibegins_with(spRegStr, "dbat"))
+	{
+		if (ibegins_with(spRegStr, "i"))
+		{
+			spRegNumber = 528;
+		}
+		else
+		{
+			spRegNumber = 536;
+		}
+		spRegNumber += stoi(spRegStr.substr(4, 1).data()) * 2;
+		spRegNumber += (ibegins_with(spRegStr.substr(5, 1), "l")) ? 1 : 0;
 	}
 	if (spRegNumber != UINT32_MAX && subNumberIndex != UINT32_MAX)
 	{
