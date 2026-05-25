@@ -716,7 +716,10 @@ uint32_t getSpRegID(std::string_view spRegStr)
 	if (iequals(spRegStr, "xer")) { spRegNumber = 1; }
 	else if (iequals(spRegStr, "lr")) { spRegNumber = 8; }
 	else if (iequals(spRegStr, "ctr")) { spRegNumber = 9; }
+	else if (iequals(spRegStr, "dsisr")) { spRegNumber = 18; }
 	else if (iequals(spRegStr, "dar")) { spRegNumber = 19; }
+	else if (iequals(spRegStr, "iabr")) { spRegNumber = 1010; }
+	else if (iequals(spRegStr, "dabr")) { spRegNumber = 1013; }
 	else if (ibegins_with(spRegStr, "srr"))
 	{ 
 		spRegNumber = 26;
