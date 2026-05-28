@@ -219,6 +219,7 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 		case 'p': case 'P':
 			opPairedSingle(opPieces); break; //ps
 		case 'r': case 'R':
+		{
 			if (iequals(opPieces[0].substr(0, 2), "RA"))
 			{
 				if (iequals(opPieces[0].substr(2, 6), "_basic"))
@@ -229,14 +230,24 @@ void PPCop::detectOperation(string opString, aliasGroup& parentCodeLocal, aliasG
 					psaTypes(opPieces, 0x22000000);
 				else
 					badOp = ((int32_t)value == -1);
-				break;
 			}
-			opRotate(opPieces); break; //rot, rl
+			else if (iequals(opPieces[0], "rfi"))
+			{
+				opRetFromInt(opPieces);
+			}
+			else
+			{
+				opRotate(opPieces); //rot, rl
+			}
+			break;
+		}
 		case 's': case 'S':
+		{
 			if (iequals(opPieces[0].substr(0, 3), "sub")) {opMath(opPieces); break;} //sub	
 			else if (iequals(opPieces[0].substr(0, 2), "st")) { opStore(opPieces); break; } //store
 			else if (iequals(opPieces[0].substr(0, 6), "scalar")) { opTypes(opPieces); break; } //scalar 
 			else { opRotate(opPieces); break; } //shift		
+		}
 		case 't': case 'T':
 			opTrap(opPieces); break;
 		case 'w': case 'W': case 'h': case 'H':
@@ -697,18 +708,68 @@ void PPCop::opMath(vector<string>& vecList)
 
 	}
 }
+
+uint32_t getSpRegID(std::string_view spRegStr)
+{
+	uint32_t spRegNumber = UINT32_MAX;
+	uint32_t subNumberIndex = UINT32_MAX;
+	if (iequals(spRegStr, "xer")) { spRegNumber = 1; }
+	else if (iequals(spRegStr, "lr")) { spRegNumber = 8; }
+	else if (iequals(spRegStr, "ctr")) { spRegNumber = 9; }
+	else if (iequals(spRegStr, "dsisr")) { spRegNumber = 18; }
+	else if (iequals(spRegStr, "dar")) { spRegNumber = 19; }
+	else if (iequals(spRegStr, "iabr")) { spRegNumber = 1010; }
+	else if (iequals(spRegStr, "dabr")) { spRegNumber = 1013; }
+	else if (ibegins_with(spRegStr, "srr"))
+	{ 
+		spRegNumber = 26;
+		subNumberIndex = 3;
+	}
+	else if (ibegins_with(spRegStr, "sprg"))
+	{
+		spRegNumber = 272;
+		subNumberIndex = 4;
+	}
+	else if (ibegins_with(spRegStr, "gqr"))
+	{
+		spRegNumber = 912;
+		subNumberIndex = 3;
+	}
+	else if (ibegins_with(spRegStr, "spr"))
+	{
+		spRegNumber = 0;
+		subNumberIndex = 3;
+	}
+	else if (ibegins_with(spRegStr, "ibat") || ibegins_with(spRegStr, "dbat"))
+	{
+		if (ibegins_with(spRegStr, "i"))
+		{
+			spRegNumber = 528;
+		}
+		else
+		{
+			spRegNumber = 536;
+		}
+		spRegNumber += stoi(spRegStr.substr(4, 1).data()) * 2;
+		spRegNumber += (ibegins_with(spRegStr.substr(5, 1), "l")) ? 1 : 0;
+	}
+	if (spRegNumber != UINT32_MAX && subNumberIndex != UINT32_MAX)
+	{
+		spRegNumber += stoi(spRegStr.substr(subNumberIndex).data());
+	}
+
+	return spRegNumber;
+}
+
 void PPCop::opMove(vector<string>& vecList)
 {
 	value = setOpBeginning(31);
 	if (ISOP("mtspr"))	//Move To Special Purpose Register X-Form
 	{
 		value += 467 * 2;
-		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
-			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
-			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
-			value += setBTBABB(regClean(vecList[1]), 1, 0);
+		uint32_t gprNumber = regClean(vecList[2]);
+		uint32_t spRegNumber = getSpRegID(vecList[1]);
+		value += setBTBABB(gprNumber,spRegNumber & 0b11111, (spRegNumber >> 5) & 0b11111);
 	}
 	else if (ISOP("mtlr"))	value += 467 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move To Link Register
 	else if (ISOP("mtctr"))	value += 467 * 2 + setBTBABB(regClean(vecList[1]), 9, 0);		//Move To Count Register
@@ -716,12 +777,9 @@ void PPCop::opMove(vector<string>& vecList)
 	else if (ISOP("mfspr"))
 	{
 		value += 339 * 2;
-		if (iequals(vecList[2], "lr") || regClean(vecList[2]) == 8)
-			value += setBTBABB(regClean(vecList[1]), 8, 0);
-		else if (iequals(vecList[2], "ctr") || regClean(vecList[2]) == 9)
-			value += setBTBABB(regClean(vecList[1]), 9, 0);
-		else if (iequals(vecList[2], "xer") || regClean(vecList[2]) == 1)
-			value += setBTBABB(regClean(vecList[1]), 1, 0);;
+		uint32_t gprNumber = regClean(vecList[1]);
+		uint32_t spRegNumber = getSpRegID(vecList[2]);
+		value += setBTBABB(gprNumber,spRegNumber & 0b11111, (spRegNumber >> 5) & 0b11111);
 	}
 	else if (ISOP("mflr"))	value += 339 * 2 + setBTBABB(regClean(vecList[1]), 8, 0);		//Move From Link Register
 	else if (ISOP("mfctr"))	value += 339 * 2 + setBTBABB(regClean(vecList[1]), 9, 0);		//Move From Count Register
@@ -906,4 +964,8 @@ void PPCop::opTrap(vector<string>& vecList)
 	else if (ISOP("twi"))	value = setOpBeginning(3) + incTORASI;				//Trap Word Immediate D-Form
 	else if (ISOP("td"))	value = setOpBeginning(31) + 68 * 2 + incTORARB;	//Trap Doubleword X-Form
 	else if (ISOP("tw"))	value = setOpBeginning(31) +  4 * 2 + incTORARB;	//Trap Word X-Form
+}
+void PPCop::opRetFromInt(vector<string>& vecList)
+{
+	if (ISOP("rfi")) value = 0x4C000064; // Return From Interrupt
 }

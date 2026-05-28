@@ -9,12 +9,16 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 
 */
 
+#include <climits>
+#include <cstdint>
 #include <filesystem>
 #include <vector>
 #include "compileGCT.h"
 
 using namespace std;
+uint32_t codesetBaseAddress;
 bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, pressKeyClose, repairPathCase;
+
 ofstream logFile, codeset;
 
  int main(int argc, char* argv[])
@@ -28,6 +32,7 @@ ofstream logFile, codeset;
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
+	::codesetBaseAddress = UINT_MAX;
 	cout << "GCTRealMate v0.2.1" << endl;
 	if (argc <= 1)
 	{
@@ -65,6 +70,27 @@ ofstream logFile, codeset;
 				case 'c': case 'C': ::fileCompare = true; break;
 				case 'q': case 'Q': ::pressKeyClose = false; break;
 				case 'r': case 'R': ::repairPathCase = true; break;
+				case 'b': case 'B': 
+				{
+					if (argc > (i + 1))
+					{
+						string_view addressArg(argv[i + 1]);
+						size_t addrBeginIdx = SIZE_MAX;
+						if (addressArg.starts_with('$'))
+						{
+							addrBeginIdx = 1;
+						}
+						else if (addressArg.starts_with("0x"sv))
+						{
+							addrBeginIdx = 2;
+						}
+						if (addrBeginIdx != SIZE_MAX)
+						{
+							::codesetBaseAddress = stoul(addressArg.substr(addrBeginIdx).data(), nullptr, 16);
+						}
+						i++;
+					}
+				}
 				default: break;
 				};
 			}

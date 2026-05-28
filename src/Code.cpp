@@ -122,9 +122,20 @@ string Code::getMacro(string macroName, vector<string>& ArgOrig)
 	return "";
 }
 
-Code::Code(string nameInit)
+uint32_t Code::getLen()
+{
+	return op.size() * 4;
+}
+
+uint32_t Code::getGctPos()
+{
+	return gctPos;
+}
+
+Code::Code(string nameInit, uint32_t gctPosIn)
 {
 	name = nameInit;
+	gctPos = gctPosIn;
 }
 
 Code::~Code()

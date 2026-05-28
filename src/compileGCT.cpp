@@ -1,5 +1,6 @@
 #include "compileGCT.h"
 #include "utility.h"
+#include <cstdint>
 #include <filesystem>
 
 void compileGCT::compile(const std::filesystem::path& name)
@@ -530,8 +531,16 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 			else if (mode == opCodeMode)
 			{
 				operations.emplace();
-				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, 
-				geckoOps.back().replaceList, (writeType == hookCode) ? hookAddress + ((operations.size() - 1) * 4) : UINT32_MAX);// , geckoOps.back());
+				uint32_t opAddress = UINT32_MAX;
+				if (writeType == hookCode)
+				{
+					opAddress = hookAddress + ((operations.size() - 1) * 4);
+				}
+				else if (writeType == hookHook && codesetBaseAddress != UINT32_MAX)
+				{
+					opAddress = codesetBaseAddress + geckoOps.back().getGctPos() + 0x8 + ((operations.size() - 1) * 4);
+				}
+				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, geckoOps.back().replaceList, opAddress);
 			}
 			else if (!isJustHex(temp))
 			{
@@ -574,15 +583,22 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 				
 					mode = geckoCodeMode; 
 					writeType = notHooked;
-					geckoOps.emplace(tempLine);  // Creates a new code and sets the name
+					uint32_t codeBegin = sizeof(header);
+					if (!geckoOps.empty())
+					{
+						Code& prevCode = geckoOps.back(); 
+						codeBegin = prevCode.getGctPos() + prevCode.getLen();
+					}
+					geckoOps.emplace(tempLine, codeBegin);  // Creates a new code and sets the name
 					geckoOps.back().ShowName();  // Lets the user see progress in realtime.
+					
 					if (::provideLOG)       // 1 = log of all code names
 					{
 						for (int i = 1; i < streams.size(); i++)
 						{
 							::logFile << '\t';
 						}
-						::logFile << tempLine << endl;
+						::logFile << tempLine << " @ Off 0x" << std::hex << codeBegin << std::dec << endl;
 					}						
 				}
 			}

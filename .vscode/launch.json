@@ -10,7 +10,7 @@
             "request": "launch",
             "linux":{"program": "${workspaceFolder}/build/GCTRealMate"},
             "windows":{"program": "${workspaceFolder}/build/GCTRealMate.exe"},
-            "args": ["-r", "./RSBE01.txt"],
+            "args": ["-r", "-t", "-l", "-b", "0x80566528", "D:/project-plus-ex-dev/Build/P+Ex/RSBE01.txt"],
             "cwd": "${workspaceFolder}"
         },
     ]
