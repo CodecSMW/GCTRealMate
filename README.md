@@ -7,10 +7,10 @@ To assemble a `.asm` file or `.txt` codeset into a `.GCT` file, either drag it o
 Additionally, GCTRM accepts a handful of extra arguments to affect its output:
 | Arg  | Description                                                                                                 |
 |-----:|-------------------------------------------------------------------------------------------------------------|
-| "`-l`" | Creates a log listing the names of every code assembled into the generated `.GCT`.                         |
-| "`-q`" | Skips the `Press enter to close.` prompt after program execution.                                          |
-| "`-t`" | Produces a `codeset.txt` file, including each assembled code and its raw hex contents.                     |
-| "`-*`" | Inserts asterisks in front of each line of raw hex in the generated `codeset.txt` file.                    |
-| "`-g`" | Prints "RSBE01" at the top of the codeset.txt file, in order to provide a codeset that GCTconvert can use. |
-| "`-r`" | Enables attempts to resolve incorrect capitalization in `.include` filepath arguments (Linux only).        |
-| "`-b`" | Reads in the following arg as the base address of the GCT. Required for short-branches (eg. `bl $80001234`) in `HOOK` codes. |
+| `-l` | Creates a log listing the names of every code assembled into the generated `.GCT`.                         |
+| `-q` | Skips the `Press enter to close.` prompt after program execution.                                          |
+| `-t` | Produces a `codeset.txt` file, including each assembled code and its raw hex contents.                     |
+| `-*` | Inserts asterisks in front of each line of raw hex in the generated `codeset.txt` file.                    |
+| `-g` | Prints "RSBE01" at the top of the codeset.txt file, in order to provide a codeset that GCTconvert can use. |
+| `-r` | Enables attempts to resolve incorrect capitalization in `.include` filepath arguments (Linux only).        |
+| `-b` | Reads in the following arg as the base address of the GCT. Required for short-branches (eg. `bl $80001234`) in `HOOK` codes. |
