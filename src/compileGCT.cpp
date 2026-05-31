@@ -628,6 +628,17 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, istre
 		currentStream->get(tempchar);
 		if (currentStream->eof())
 			break;
+		if (mode != opCodeMode && temp.empty() && tempchar == '!')
+		{
+			temp += tempchar;
+			do
+			{
+				tempLine += tempchar;
+				currentStream->get(tempchar);
+			}
+			while (!currentStream->eof() && tempchar != '\n');
+			break;
+		}
 		switch (tempchar)
 		{
 		case '#': breakLine = true;
