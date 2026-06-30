@@ -374,6 +374,7 @@ void PPCop::checkBranchCondition(string& opString)
 void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, aliasGroup& parentCodeWide, uint32_t opAddrIn)
 {
 	int tempOff;
+	bool isAbsolute = 0;
 	value = setOpBeginning(19); opType = bc;
 	if (ISOP("beq"))	   { value += setBOBI(0b01100, 2);}
 	else if (ISOP("bne"))  { value += setBOBI(0b00100, 2);}
@@ -392,10 +393,13 @@ void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, alias
 		checkBranchCondition(vecList[0]);
 	else if (ISOP("bl"))
 	{
-		value++; opType + 2;  //LK = 1
+		value++; //LK = 1
 	}
 	if (ISOP("ba") || ISOP("a"))
-		value += 2; opType + 1; //AA = 1
+	{
+		isAbsolute = 1;
+		// value += 2; //AA = 1
+	}
 	if (getOpBeginning() != 19)
 	{
 		if (vecList.size() > 2)
@@ -408,11 +412,17 @@ void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, alias
 	if (vecList.size() > 1)
 	{
 		int i = vecList.size() - 1;
-		if (vecList[i].starts_with("0x") || vecList[i].starts_with("-0x") || vecList[i].starts_with('$'))
+		std::string_view argumentView = std::string_view(vecList[i]);
+		bool absolutePrefixed = 0;
+		if (argumentView[0] == '$')
 		{
-			if (opType == b && opAddrIn != UINT32_MAX && vecList[i].starts_with('$'))
+			absolutePrefixed = 1;
+			argumentView.remove_prefix(1);
+		}
+		if (absolutePrefixed || vecList[i].starts_with("0x") || vecList[i].starts_with("-0x"))
+		{
+			if (opType == b && (absolutePrefixed || isAbsolute) && opAddrIn != UINT32_MAX)
 			{
-				std::string_view argumentView = std::string_view(vecList[i]).substr(1);
 				uint32_t addressIn = UINT32_MAX;
 				for (auto itr = parentCodeLocal.aliasList.begin(); addressIn == UINT32_MAX && itr != parentCodeLocal.aliasList.end(); itr++)
 				{
@@ -430,7 +440,11 @@ void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, alias
 				}
 				if (addressIn == UINT32_MAX)
 				{
-					addressIn = std::stoul(vecList[i].data() + 1, nullptr, 16);
+					addressIn = std::stoul(argumentView.data(), nullptr, 16);
+					if (isAbsolute && !absolutePrefixed)
+					{
+						addressIn += 0x80000000ul;
+					}
 				}
 				tempOff = int((long long)addressIn - (long long)opAddrIn);
 			}
@@ -448,10 +462,6 @@ void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, alias
 				if (tempOff < 0)
 					value ^= (uint32_t)(0b00001 * pow(2, (31 - 10)));
 				value |= (((uint32_t)tempOff) & (uint32_t)0xFFFC);
-			}
-			if (i == 2)
-			{
-				//value += vecReg(1) * (pow(2, 31 - 13));
 			}
 		}
 		else
