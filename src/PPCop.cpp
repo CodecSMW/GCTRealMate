@@ -1,4 +1,5 @@
 #include "PPCop.h"
+#include "_cmdArgs.h"
 #include <math.h>
 
 uint32_t PPCop::init(string& operation)
@@ -397,8 +398,14 @@ void PPCop::opBranch(vector<string>& vecList, aliasGroup& parentCodeLocal, alias
 	}
 	if (ISOP("ba") || ISOP("a"))
 	{
-		isAbsolute = 1;
-		// value += 2; //AA = 1
+		if (doInlineBAConv)
+		{
+			isAbsolute = 1;
+		}
+		else
+		{
+			value += 2; //AA = 1
+		}
 	}
 	if (getOpBeginning() != 19)
 	{

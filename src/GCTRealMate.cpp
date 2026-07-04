@@ -13,12 +13,10 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 #include <cstdint>
 #include <filesystem>
 #include <vector>
+#include "_cmdArgs.h"
 #include "compileGCT.h"
 
 using namespace std;
-uint32_t codesetBaseAddress;
-bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, pressKeyClose, repairPathCase;
-
 ofstream logFile, codeset;
 
  int main(int argc, char* argv[])
@@ -32,6 +30,7 @@ ofstream logFile, codeset;
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
+	::doInlineBAConv = false;
 	::codesetBaseAddress = UINT_MAX;
 	cout << "GCTRealMate v0.2.1" << endl;
 	if (argc <= 1)
@@ -70,6 +69,7 @@ ofstream logFile, codeset;
 				case 'c': case 'C': ::fileCompare = true; break;
 				case 'q': case 'Q': ::pressKeyClose = false; break;
 				case 'r': case 'R': ::repairPathCase = true; break;
+				case 'a': case 'A': ::doInlineBAConv = true; break;
 				case 'b': case 'B': 
 				{
 					if (argc > (i + 1))
