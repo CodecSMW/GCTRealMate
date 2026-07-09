@@ -47,10 +47,11 @@ void parseCmdLineArgs(std::string_view argsView)
 				if (!logFile.is_open()) ::logFile.open("log.txt", ofstream::trunc);
 				break;
 			}
-			case 'p': case 'P': {::preserveOld = true; break;}
-			case 'c': case 'C': {::fileCompare = true; break;}
-			case 'q': case 'Q': {::pressKeyClose = false; break;}
-			case 'r': case 'R': {::repairPathCase = true; break;}
+			case 'p': case 'P': { ::preserveOld = true; break; }
+			case 'c': case 'C': { ::fileCompare = true; break; }
+			case 'q': case 'Q': { ::pressKeyClose = false; break; }
+			case 'r': case 'R': { ::repairPathCase = true; break; }
+			case 'i': case 'I': { ::ignoreSettingsFile = true; break; }
 			case 'a': case 'A': { ::doInlineBAConv = 1; break; }
 			case 'b': case 'B':
 			{
