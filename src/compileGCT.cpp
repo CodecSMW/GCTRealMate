@@ -539,7 +539,7 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 				else if (writeType == hookHook && codesetBaseAddress != UINT32_MAX)
 				{
 					Code& currCode = geckoOps.back();
-					opAddress = currCode.getGctPos() + ((currCode.op.size() + (operations.size() - 1)) * 4);
+					opAddress = currCode.getGctPos() + currCode.getLen() + ((operations.size() - 1) * 4);
 					opAddress += codesetBaseAddress + 0x8;
 				}
 				operations.back().detectOperation(temp, geckoOps.back().localReplaceList, geckoOps.back().replaceList, opAddress);

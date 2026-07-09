@@ -19,6 +19,68 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 using namespace std;
 ofstream logFile, codeset;
 
+bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::filesystem::path& codesetPath)
+{
+	bool result = 0;
+
+	if (std::filesystem::is_regular_file(settingsPath))
+	{
+		std::string currLine;
+		std::ifstream streamIn(settingsPath);
+		while (!result && std::getline(streamIn, currLine))
+		{
+			std::string codesetFilename = codesetPath.filename().string();
+			if (ibegins_with(currLine, codesetFilename))
+			{
+				std::string_view argsView(currLine.data() + codesetFilename.size());
+				std::size_t colonPos = argsView.find(':');
+				if (colonPos != std::string::npos)
+				{
+					while (!argsView.empty())
+					{
+						argsView.remove_prefix(argsView.find('-'));
+						if (argsView.size() <= 1) break;
+
+						argsView.remove_prefix(1);
+						char argType = argsView.front();
+						switch (argType)
+						{
+							case 'a': case 'A':
+							{
+								::doInlineBAConv = 1;
+								break;
+							}
+							case 'b': case 'B':
+							{
+								argsView.remove_prefix(argsView.find_first_not_of(" \t", 1));
+								size_t addrBeginIdx = 0;
+								if (argsView.starts_with('$'))
+								{
+									addrBeginIdx = 1;
+								}
+								else if (argsView.starts_with("0x"sv))
+								{
+									addrBeginIdx = 2;
+								}
+								if (addrBeginIdx != SIZE_MAX)
+								{
+									std::size_t lenOut = SIZE_MAX;
+									::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
+									argsView.remove_prefix(addrBeginIdx + lenOut);
+								}
+								break;
+							}
+						}
+					}
+				}
+				result = 1;
+			}
+		}
+	}
+
+	return result;
+}
+
  int main(int argc, char* argv[])
 {
 	compileGCT compile;
@@ -32,6 +94,8 @@ ofstream logFile, codeset;
 	::repairPathCase = false;
 	::doInlineBAConv = false;
 	::codesetBaseAddress = UINT_MAX;
+	::ignoreSettingsFile = false;
+	
 	cout << "GCTRealMate v0.2.1" << endl;
 	if (argc <= 1)
 	{
@@ -96,6 +160,13 @@ ofstream logFile, codeset;
 			}
 			else
 			{
+				std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
+				std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
+				if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+				{
+					parseSettingsFile(settingsPath, std::filesystem::absolute(argv[i]));
+				}
+				
 				compile.compile(std::filesystem::absolute(argv[i]));
 			}
 		}
