@@ -9,11 +9,10 @@
 #include <string>
 #include "Code.h"
 #include "utility.h"
+#include "_cmdArgs.h"
 #include "aliasGroup.h"
 
 using namespace std;
-extern uint32_t codesetBaseAddress;
-extern bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, repairPathCase;
 extern ofstream logFile, codeset;
 
 #define ISIT(stringCheck) isString(line,stringCheck,tempOff)

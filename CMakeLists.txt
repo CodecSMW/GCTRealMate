@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Init Executable
-add_executable(${PROJECT_NAME} src/Code.cpp src/compileGCT.cpp src/GCTRealMate.cpp src/PPCop.cpp src/utility.cpp)
+add_executable(${PROJECT_NAME} src/Code.cpp src/compileGCT.cpp src/GCTRealMate.cpp src/PPCop.cpp src/utility.cpp
+    src/_cmdArgs.cpp)
 # Explicitly Link Include Directory
 target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include" )

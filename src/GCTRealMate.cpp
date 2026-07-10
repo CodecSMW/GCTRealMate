@@ -13,13 +13,92 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 #include <cstdint>
 #include <filesystem>
 #include <vector>
+#include "_cmdArgs.h"
 #include "compileGCT.h"
 
 using namespace std;
-uint32_t codesetBaseAddress;
-bool provideTXT, provideLOG, preserveOld, fileCompare, GCTconvert, astUsage, pressKeyClose, repairPathCase;
-
 ofstream logFile, codeset;
+
+void parseCmdLineArgs(std::string_view argsView)
+{
+	while (!argsView.empty())
+	{
+		std::size_t nextArgPos = argsView.find('-');
+		if (nextArgPos == std::string::npos || (nextArgPos + 1) >= argsView.size()) break;
+		argsView.remove_prefix(nextArgPos + 1);
+		switch (argsView.front())
+		{
+			//provides a codeset that GCTconvert can use. Note: Falls through to below.
+			case 'g': case 'G': { ::GCTconvert = true; }
+			//if a codeset is created, it will set the code to have * for easy insertion to other programs. Note: Falls through to below.
+			case '*': { ::astUsage = true; }
+			//creates a text codeset
+			case 't': case 'T': 
+			{
+				::provideTXT = true; 
+				if(!codeset.is_open()) ::codeset.open("codeset.txt", ofstream::trunc);  
+				break;
+			}
+			//creates a log
+			case 'l': case 'L': 
+			{
+
+				::provideLOG = true; 
+				if (!logFile.is_open()) ::logFile.open("log.txt", ofstream::trunc);
+				break;
+			}
+			case 'p': case 'P': { ::preserveOld = true; break; }
+			case 'c': case 'C': { ::fileCompare = true; break; }
+			case 'q': case 'Q': { ::pressKeyClose = false; break; }
+			case 'r': case 'R': { ::repairPathCase = true; break; }
+			case 'i': case 'I': { ::ignoreSettingsFile = true; break; }
+			case 'a': case 'A': { ::doInlineBAConv = 1; break; }
+			case 'b': case 'B':
+			{
+				argsView.remove_prefix(argsView.find_first_not_of(" \t", 1));
+				size_t addrBeginIdx = 0;
+				if (argsView.starts_with('$'))
+				{
+					addrBeginIdx = 1;
+				}
+				else if (argsView.starts_with("0x"sv))
+				{
+					addrBeginIdx = 2;
+				}
+				std::size_t lenOut = SIZE_MAX;
+				::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
+				break;
+			}
+		}
+	}
+}
+
+bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::filesystem::path& codesetPath)
+{
+	bool result = 0;
+
+	if (std::filesystem::is_regular_file(settingsPath))
+	{
+		std::string currLine;
+		std::ifstream streamIn(settingsPath);
+		while (!result && std::getline(streamIn, currLine))
+		{
+			std::string codesetFilename = codesetPath.filename().string();
+			if (ibegins_with(currLine, codesetFilename))
+			{
+				std::string_view argsView(currLine.data() + codesetFilename.size());
+				std::size_t colonPos = argsView.find(':');
+				if (colonPos != std::string::npos)
+				{
+					parseCmdLineArgs(argsView.substr(colonPos + 1));
+				}
+				result = 1;
+			}
+		}
+	}
+
+	return result;
+}
 
  int main(int argc, char* argv[])
 {
@@ -32,7 +111,10 @@ ofstream logFile, codeset;
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
+	::doInlineBAConv = false;
 	::codesetBaseAddress = UINT_MAX;
+	::ignoreSettingsFile = false;
+	
 	cout << "GCTRealMate v0.2.1" << endl;
 	if (argc <= 1)
 	{
@@ -44,61 +126,35 @@ ofstream logFile, codeset;
 	}
 	else
 	{
-		for (int i = 1; i < argc; i++)
+		std::string combinedArgStr;
+		combinedArgStr.reserve(0x40);
+		uint32_t checksToSkip = 0;
+		std::size_t itr = 1;
+		for (itr; itr < argc; itr++)
 		{
-			if (argv[i][0] == '-')
+			if ((--checksToSkip == 0) || argv[itr][0] == '-')
 			{
-				switch (argv[i][1])
+				combinedArgStr += argv[itr]; combinedArgStr += " ";
+				if (argv[itr][1] == 'b')
 				{
-				case 'g': case 'G': ::GCTconvert = true;
-					//provides a codeset that GCTconvert can use.
-				case '*': ::astUsage = true;
-					//if a codeset is created, it will set the code to have * for easy insertion to other programs
-				case 't': case 'T': 
-					::provideTXT = true; 
-					if(!codeset.is_open())
-						::codeset.open("codeset.txt", ofstream::trunc);  
-					break;
-					//creates a text codeset
-				case 'l': case 'L': 
-					::provideLOG = true; 
-					if (!logFile.is_open())
-						::logFile.open("log.txt", ofstream::trunc);  
-					break;
-					//creates a log
-				case 'p': case 'P': ::preserveOld = true; break;
-				case 'c': case 'C': ::fileCompare = true; break;
-				case 'q': case 'Q': ::pressKeyClose = false; break;
-				case 'r': case 'R': ::repairPathCase = true; break;
-				case 'b': case 'B': 
-				{
-					if (argc > (i + 1))
-					{
-						string_view addressArg(argv[i + 1]);
-						size_t addrBeginIdx = SIZE_MAX;
-						if (addressArg.starts_with('$'))
-						{
-							addrBeginIdx = 1;
-						}
-						else if (addressArg.starts_with("0x"sv))
-						{
-							addrBeginIdx = 2;
-						}
-						if (addrBeginIdx != SIZE_MAX)
-						{
-							::codesetBaseAddress = stoul(addressArg.substr(addrBeginIdx).data(), nullptr, 16);
-						}
-						i++;
-					}
+					checksToSkip = 1;
 				}
-				default: break;
-				};
 			}
 			else
 			{
-				compile.compile(std::filesystem::absolute(argv[i]));
+				break;
 			}
 		}
+		parseCmdLineArgs(combinedArgStr);
+		
+		std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
+		std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
+		std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
+		if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+		{
+			parseSettingsFile(settingsPath, absolutePath);
+		}
+		compile.compile(absolutePath);
 	}
 
 	if (::logFile.is_open())
