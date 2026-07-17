@@ -115,7 +115,7 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	::codesetBaseAddress = UINT_MAX;
 	::ignoreSettingsFile = false;
 	
-	cout << "GCTRealMate v0.2.1" << endl;
+	cout << "GCTRealMate v0.2.5" << endl;
 	if (argc <= 1)
 	{
 		cout << "How to use GCTRealMate." << endl;
