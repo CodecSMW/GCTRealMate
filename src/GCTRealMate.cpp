@@ -115,7 +115,7 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	::codesetBaseAddress = UINT_MAX;
 	::ignoreSettingsFile = false;
 	
-	cout << "GCTRealMate v0.2.1" << endl;
+	cout << "GCTRealMate v0.2.5" << endl;
 	if (argc <= 1)
 	{
 		cout << "How to use GCTRealMate." << endl;
@@ -129,8 +129,8 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 		std::string combinedArgStr;
 		combinedArgStr.reserve(0x40);
 		uint32_t checksToSkip = 0;
-		std::size_t itr = 1;
-		for (itr; itr < argc; itr++)
+		bool compiledGCT = 0;
+		for (std::size_t itr = 1; itr < argc; itr++)
 		{
 			if ((--checksToSkip == 0) || argv[itr][0] == '-')
 			{
@@ -140,21 +140,22 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 					checksToSkip = 1;
 				}
 			}
-			else
+			else if (!compiledGCT)
 			{
-				break;
+				parseCmdLineArgs(combinedArgStr);
+				combinedArgStr.clear();
+				std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
+				std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
+				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
+				if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+				{
+					parseSettingsFile(settingsPath, absolutePath);
+				}
+				compile.compile(absolutePath);
+				compiledGCT = 1;
 			}
 		}
 		parseCmdLineArgs(combinedArgStr);
-		
-		std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
-		std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
-		std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
-		if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
-		{
-			parseSettingsFile(settingsPath, absolutePath);
-		}
-		compile.compile(absolutePath);
 	}
 
 	if (::logFile.is_open())
