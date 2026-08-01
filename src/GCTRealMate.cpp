@@ -30,6 +30,10 @@ void setFlagState(std::string_view& argsView, bool& flagIn, bool defaultStateIn)
 			default: { flagIn = defaultStateIn; break; }
 		}
 	}
+	else 
+	{
+		flagIn = defaultStateIn;
+	}
 }
 void parseCmdLineArgs(std::string_view argsView)
 {
@@ -81,6 +85,7 @@ void parseCmdLineArgs(std::string_view argsView)
 					}
 					std::size_t lenOut = SIZE_MAX;
 					::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
+					argsView.remove_prefix(lenOut + addrBeginIdx);
 				}
 				break;
 			}
