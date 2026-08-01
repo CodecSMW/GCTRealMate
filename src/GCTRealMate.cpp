@@ -120,7 +120,13 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	return result;
 }
 
-void resetCmdLineArgs()
+void resetCompilationArgs()
+{
+	::doInlineBAConv = false;
+	::codesetBaseAddress = UINT_MAX;
+	::ignoreSettingsFile = false;
+}
+ int main(int argc, char* argv[])
 {
 	::provideTXT = false;
 	::provideLOG = false;
@@ -130,12 +136,6 @@ void resetCmdLineArgs()
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
-	::doInlineBAConv = false;
-	::codesetBaseAddress = UINT_MAX;
-	::ignoreSettingsFile = false;
-}
- int main(int argc, char* argv[])
-{
 	cout << "GCTRealMate v0.2.5" << endl;
 	if (argc <= 1)
 	{
@@ -163,7 +163,7 @@ void resetCmdLineArgs()
 				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
 				if (std::filesystem::is_regular_file(absolutePath))
 				{
-					resetCmdLineArgs();
+					resetCompilationArgs();
 					if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
 					{
 						parseSettingsFile(settingsPath, absolutePath);
