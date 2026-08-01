@@ -115,7 +115,7 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	return result;
 }
 
- int main(int argc, char* argv[])
+void resetCmdLineArgs()
 {
 	::provideTXT = false;
 	::provideLOG = false;
@@ -128,7 +128,9 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	::doInlineBAConv = false;
 	::codesetBaseAddress = UINT_MAX;
 	::ignoreSettingsFile = false;
-	
+}
+ int main(int argc, char* argv[])
+{
 	cout << "GCTRealMate v0.2.5" << endl;
 	if (argc <= 1)
 	{
@@ -149,19 +151,22 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 			{
 				combinedArgStr += argv[itr]; combinedArgStr += " ";
 			}
-			else if (!compiledGCT)
+			else
 			{
-				parseCmdLineArgs(combinedArgStr);
-				combinedArgStr.clear();
 				std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
 				std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
 				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
-				if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+				if (std::filesystem::is_regular_file(absolutePath))
 				{
-					parseSettingsFile(settingsPath, absolutePath);
+					resetCmdLineArgs();
+					if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+					{
+						parseSettingsFile(settingsPath, absolutePath);
+					}
+					parseCmdLineArgs(combinedArgStr);
+					compileGCT().compile(absolutePath);
+					combinedArgStr.clear();
 				}
-				compileGCT().compile(absolutePath);
-				compiledGCT = 1;
 			}
 		}
 		parseCmdLineArgs(combinedArgStr);
