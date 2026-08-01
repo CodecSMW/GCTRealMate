@@ -19,6 +19,18 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 using namespace std;
 ofstream logFile, codeset;
 
+void setFlagState(std::string_view& argsView, bool& flagIn, bool defaultStateIn)
+{
+	if (argsView.size() > 2 && argsView[1] == ':')
+	{
+		switch (argsView[2])
+		{
+			case '0': { flagIn = false; break; }
+			case '1': { flagIn = true; break; }
+			default: { flagIn = defaultStateIn; break; }
+		}
+	}
+}
 void parseCmdLineArgs(std::string_view argsView)
 {
 	while (!argsView.empty())
@@ -26,34 +38,34 @@ void parseCmdLineArgs(std::string_view argsView)
 		std::size_t nextArgPos = argsView.find('-');
 		if (nextArgPos == std::string::npos || (nextArgPos + 1) >= argsView.size()) break;
 		argsView.remove_prefix(nextArgPos + 1);
-		switch (argsView.front())
+		switch (tolower(argsView.front()))
 		{
 			//provides a codeset that GCTconvert can use. Note: Falls through to below.
-			case 'g': case 'G': { ::GCTconvert = true; }
+			case 'g': { setFlagState(argsView, ::GCTconvert, true); }
 			//if a codeset is created, it will set the code to have * for easy insertion to other programs. Note: Falls through to below.
-			case '*': { ::astUsage = true; }
+			case '*': { setFlagState(argsView, ::astUsage, true); }
 			//creates a text codeset
-			case 't': case 'T': 
+			case 't':
 			{
-				::provideTXT = true; 
+				setFlagState(argsView, ::provideTXT, true);
 				if(!codeset.is_open()) ::codeset.open("codeset.txt", ofstream::trunc);  
 				break;
 			}
 			//creates a log
-			case 'l': case 'L': 
+			case 'l':
 			{
 
-				::provideLOG = true; 
+				setFlagState(argsView, ::provideLOG, true);
 				if (!logFile.is_open()) ::logFile.open("log.txt", ofstream::trunc);
 				break;
 			}
-			case 'p': case 'P': { ::preserveOld = true; break; }
-			case 'c': case 'C': { ::fileCompare = true; break; }
-			case 'q': case 'Q': { ::pressKeyClose = false; break; }
-			case 'r': case 'R': { ::repairPathCase = true; break; }
-			case 'i': case 'I': { ::ignoreSettingsFile = true; break; }
-			case 'a': case 'A': { ::doInlineBAConv = 1; break; }
-			case 'b': case 'B':
+			case 'p': { setFlagState(argsView, ::preserveOld, true); break; }
+			case 'c': { setFlagState(argsView, ::fileCompare, true); break; }
+			case 'q': { setFlagState(argsView, ::pressKeyClose, false); break; }
+			case 'r': { setFlagState(argsView, ::repairPathCase, true); break; }
+			case 'i': { setFlagState(argsView, ::ignoreSettingsFile, true); break; }
+			case 'a': { setFlagState(argsView, ::doInlineBAConv, true); break; }
+			case 'b':
 			{
 				argsView.remove_prefix(argsView.find_first_not_of(" \t", 1));
 				size_t addrBeginIdx = 0;
@@ -61,7 +73,7 @@ void parseCmdLineArgs(std::string_view argsView)
 				{
 					addrBeginIdx = 1;
 				}
-				else if (argsView.starts_with("0x"sv))
+				else if (argsView.starts_with("0x"))
 				{
 					addrBeginIdx = 2;
 				}
@@ -102,7 +114,6 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 
  int main(int argc, char* argv[])
 {
-	compileGCT compile;
 	::provideTXT = false;
 	::provideLOG = false;
 	::preserveOld = false;
@@ -151,7 +162,7 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 				{
 					parseSettingsFile(settingsPath, absolutePath);
 				}
-				compile.compile(absolutePath);
+				compileGCT().compile(absolutePath);
 				compiledGCT = 1;
 			}
 		}
