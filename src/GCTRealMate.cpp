@@ -67,18 +67,21 @@ void parseCmdLineArgs(std::string_view argsView)
 			case 'a': { setFlagState(argsView, ::doInlineBAConv, true); break; }
 			case 'b':
 			{
-				argsView.remove_prefix(argsView.find_first_not_of(" \t", 1));
-				size_t addrBeginIdx = 0;
-				if (argsView.starts_with('$'))
+				if (argsView.size() > 2 && argsView[1] == ':')
 				{
-					addrBeginIdx = 1;
+					argsView.remove_prefix(2);
+					size_t addrBeginIdx = 0;
+					if (argsView.starts_with('$'))
+					{
+						addrBeginIdx = 1;
+					}
+					else if (argsView.starts_with("0x"))
+					{
+						addrBeginIdx = 2;
+					}
+					std::size_t lenOut = SIZE_MAX;
+					::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
 				}
-				else if (argsView.starts_with("0x"))
-				{
-					addrBeginIdx = 2;
-				}
-				std::size_t lenOut = SIZE_MAX;
-				::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
 				break;
 			}
 		}
@@ -139,17 +142,12 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	{
 		std::string combinedArgStr;
 		combinedArgStr.reserve(0x40);
-		uint32_t checksToSkip = 0;
 		bool compiledGCT = 0;
 		for (std::size_t itr = 1; itr < argc; itr++)
 		{
-			if ((--checksToSkip == 0) || argv[itr][0] == '-')
+			if (argv[itr][0] == '-')
 			{
 				combinedArgStr += argv[itr]; combinedArgStr += " ";
-				if (argv[itr][1] == 'b')
-				{
-					checksToSkip = 1;
-				}
 			}
 			else if (!compiledGCT)
 			{
