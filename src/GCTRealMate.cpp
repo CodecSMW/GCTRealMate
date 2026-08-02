@@ -19,20 +19,34 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 using namespace std;
 ofstream logFile, codeset;
 
-void setFlagState(std::string_view& argsView, bool& flagIn, bool defaultStateIn)
+void setFlagState(std::string_view& argsView, bool& flagOut, bool defaultState)
 {
 	if (argsView.size() > 2 && argsView[1] == ':')
 	{
 		switch (argsView[2])
 		{
-			case '0': { flagIn = false; break; }
-			case '1': { flagIn = true; break; }
-			default: { flagIn = defaultStateIn; break; }
+			case '0': { flagOut = false; break; }
+			case '1': { flagOut = true; break; }
+			default: { flagOut = defaultState; break; }
 		}
 	}
 	else 
 	{
-		flagIn = defaultStateIn;
+		flagOut = defaultState;
+	}
+}
+void setIniIgnoredFlag(std::string_view argsView)
+{
+	while (!argsView.empty())
+	{
+		std::size_t nextArgPos = argsView.find('-');
+		if (nextArgPos == std::string::npos || (nextArgPos + 1) >= argsView.size()) break;
+		argsView.remove_prefix(nextArgPos + 1);
+		if (tolower(argsView.front()) == 'i')
+		{
+			setFlagState(argsView, ::ignoreSettingsFile, true);
+			break;
+		}
 	}
 }
 void parseCmdLineArgs(std::string_view argsView)
@@ -67,7 +81,6 @@ void parseCmdLineArgs(std::string_view argsView)
 			case 'c': { setFlagState(argsView, ::fileCompare, true); break; }
 			case 'q': { setFlagState(argsView, ::pressKeyClose, false); break; }
 			case 'r': { setFlagState(argsView, ::repairPathCase, true); break; }
-			case 'i': { setFlagState(argsView, ::ignoreSettingsFile, true); break; }
 			case 'a': { setFlagState(argsView, ::doInlineBAConv, true); break; }
 			case 'b':
 			{
@@ -101,9 +114,9 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	{
 		std::string currLine;
 		std::ifstream streamIn(settingsPath);
+		std::string codesetFilename = codesetPath.filename().string();
 		while (!result && std::getline(streamIn, currLine))
 		{
-			std::string codesetFilename = codesetPath.filename().string();
 			if (ibegins_with(currLine, codesetFilename))
 			{
 				std::string_view argsView(currLine.data() + codesetFilename.size());
@@ -164,6 +177,7 @@ void resetCompilationArgs()
 				if (std::filesystem::is_regular_file(absolutePath))
 				{
 					resetCompilationArgs();
+					setIniIgnoredFlag(combinedArgStr);
 					if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
 					{
 						parseSettingsFile(settingsPath, absolutePath);
