@@ -66,15 +66,12 @@ void parseCmdLineArgs(std::string_view argsView)
 			case 't':
 			{
 				setFlagState(argsView, ::provideTXT, true);
-				if(!codeset.is_open()) ::codeset.open("codeset.txt", ofstream::trunc);  
 				break;
 			}
 			//creates a log
 			case 'l':
 			{
-
 				setFlagState(argsView, ::provideLOG, true);
-				if (!logFile.is_open()) ::logFile.open("log.txt", ofstream::trunc);
 				break;
 			}
 			case 'p': { setFlagState(argsView, ::preserveOld, true); break; }
@@ -162,7 +159,8 @@ void resetCompilationArgs()
 	{
 		std::string combinedArgStr;
 		combinedArgStr.reserve(0x40);
-		bool compiledGCT = 0;
+		std::filesystem::path selfPath(std::filesystem::absolute(argv[0]).make_preferred());
+		std::filesystem::path settingsPath = std::filesystem::path(selfPath).replace_extension("ini");
 		for (std::size_t itr = 1; itr < argc; itr++)
 		{
 			if (argv[itr][0] == '-')
@@ -171,9 +169,7 @@ void resetCompilationArgs()
 			}
 			else
 			{
-				std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
-				std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
-				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
+				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]).make_preferred());
 				if (std::filesystem::is_regular_file(absolutePath))
 				{
 					resetCompilationArgs();
@@ -183,7 +179,24 @@ void resetCompilationArgs()
 						parseSettingsFile(settingsPath, absolutePath);
 					}
 					parseCmdLineArgs(combinedArgStr);
+
+					if (::provideTXT && !::codeset.is_open())
+					{
+						std::filesystem::path txtPath(absolutePath.parent_path());
+						txtPath.append(absolutePath.stem().string().append("_codeset.txt"));
+						::codeset.open(txtPath, ofstream::trunc);  
+					}
+					if (::provideLOG && !::logFile.is_open())
+					{
+						std::filesystem::path logPath(absolutePath.parent_path());
+						logPath.append(absolutePath.stem().string().append("_log.txt"));
+						::logFile.open(logPath, ofstream::trunc);
+					}
+					
 					compileGCT().compile(absolutePath);
+					
+					if (::codeset.is_open()) { ::codeset.close(); }
+					if (::logFile.is_open()) { ::logFile.close(); }
 					combinedArgStr.clear();
 				}
 			}
@@ -191,10 +204,6 @@ void resetCompilationArgs()
 		parseCmdLineArgs(combinedArgStr);
 	}
 
-	if (::logFile.is_open())
-		::logFile.close();
-	if (::codeset.is_open())
-		::codeset.close();
 	if (::pressKeyClose)
 	{
 		cout << "Press enter to close.";
