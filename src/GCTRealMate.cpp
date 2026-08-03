@@ -19,6 +19,8 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 using namespace std;
 ofstream logFile, codeset;
 
+const char versionString[] = "v0.2.6";
+
 void setFlagState(std::string_view& argsView, bool& flagOut, bool defaultState)
 {
 	if (argsView.size() > 2 && argsView[1] == ':')
@@ -146,7 +148,7 @@ void resetCompilationArgs()
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
-	cout << "GCTRealMate v0.2.5" << endl;
+	cout << "GCTRealMate " << versionString << endl;
 	if (argc <= 1)
 	{
 		cout << "How to use GCTRealMate." << endl;
