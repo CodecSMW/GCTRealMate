@@ -19,6 +19,38 @@ v0.9.008 Added support for ps_div and fixed some other paired-single settings
 using namespace std;
 ofstream logFile, codeset;
 
+const char versionString[] = "v0.2.6";
+
+void setFlagState(std::string_view& argsView, bool& flagOut, bool defaultState)
+{
+	if (argsView.size() > 2 && argsView[1] == ':')
+	{
+		switch (argsView[2])
+		{
+			case '0': { flagOut = false; break; }
+			case '1': { flagOut = true; break; }
+			default: { flagOut = defaultState; break; }
+		}
+	}
+	else 
+	{
+		flagOut = defaultState;
+	}
+}
+void setIniIgnoredFlag(std::string_view argsView)
+{
+	while (!argsView.empty())
+	{
+		std::size_t nextArgPos = argsView.find('-');
+		if (nextArgPos == std::string::npos || (nextArgPos + 1) >= argsView.size()) break;
+		argsView.remove_prefix(nextArgPos + 1);
+		if (tolower(argsView.front()) == 'i')
+		{
+			setFlagState(argsView, ::ignoreSettingsFile, true);
+			break;
+		}
+	}
+}
 void parseCmdLineArgs(std::string_view argsView)
 {
 	while (!argsView.empty())
@@ -26,47 +58,47 @@ void parseCmdLineArgs(std::string_view argsView)
 		std::size_t nextArgPos = argsView.find('-');
 		if (nextArgPos == std::string::npos || (nextArgPos + 1) >= argsView.size()) break;
 		argsView.remove_prefix(nextArgPos + 1);
-		switch (argsView.front())
+		switch (tolower(argsView.front()))
 		{
 			//provides a codeset that GCTconvert can use. Note: Falls through to below.
-			case 'g': case 'G': { ::GCTconvert = true; }
+			case 'g': { setFlagState(argsView, ::GCTconvert, true); }
 			//if a codeset is created, it will set the code to have * for easy insertion to other programs. Note: Falls through to below.
-			case '*': { ::astUsage = true; }
+			case '*': { setFlagState(argsView, ::astUsage, true); }
 			//creates a text codeset
-			case 't': case 'T': 
+			case 't':
 			{
-				::provideTXT = true; 
-				if(!codeset.is_open()) ::codeset.open("codeset.txt", ofstream::trunc);  
+				setFlagState(argsView, ::provideTXT, true);
 				break;
 			}
 			//creates a log
-			case 'l': case 'L': 
+			case 'l':
 			{
-
-				::provideLOG = true; 
-				if (!logFile.is_open()) ::logFile.open("log.txt", ofstream::trunc);
+				setFlagState(argsView, ::provideLOG, true);
 				break;
 			}
-			case 'p': case 'P': { ::preserveOld = true; break; }
-			case 'c': case 'C': { ::fileCompare = true; break; }
-			case 'q': case 'Q': { ::pressKeyClose = false; break; }
-			case 'r': case 'R': { ::repairPathCase = true; break; }
-			case 'i': case 'I': { ::ignoreSettingsFile = true; break; }
-			case 'a': case 'A': { ::doInlineBAConv = 1; break; }
-			case 'b': case 'B':
+			case 'p': { setFlagState(argsView, ::preserveOld, true); break; }
+			case 'c': { setFlagState(argsView, ::fileCompare, true); break; }
+			case 'q': { setFlagState(argsView, ::pressKeyClose, false); break; }
+			case 'r': { setFlagState(argsView, ::repairPathCase, true); break; }
+			case 'a': { setFlagState(argsView, ::doInlineBAConv, true); break; }
+			case 'b':
 			{
-				argsView.remove_prefix(argsView.find_first_not_of(" \t", 1));
-				size_t addrBeginIdx = 0;
-				if (argsView.starts_with('$'))
+				if (argsView.size() > 2 && argsView[1] == ':')
 				{
-					addrBeginIdx = 1;
+					argsView.remove_prefix(2);
+					size_t addrBeginIdx = 0;
+					if (argsView.starts_with('$'))
+					{
+						addrBeginIdx = 1;
+					}
+					else if (argsView.starts_with("0x"))
+					{
+						addrBeginIdx = 2;
+					}
+					std::size_t lenOut = SIZE_MAX;
+					::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
+					argsView.remove_prefix(lenOut + addrBeginIdx);
 				}
-				else if (argsView.starts_with("0x"sv))
-				{
-					addrBeginIdx = 2;
-				}
-				std::size_t lenOut = SIZE_MAX;
-				::codesetBaseAddress = stoul(argsView.substr(addrBeginIdx).data(), &lenOut, 16);
 				break;
 			}
 		}
@@ -81,9 +113,9 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	{
 		std::string currLine;
 		std::ifstream streamIn(settingsPath);
+		std::string codesetFilename = codesetPath.filename().string();
 		while (!result && std::getline(streamIn, currLine))
 		{
-			std::string codesetFilename = codesetPath.filename().string();
 			if (ibegins_with(currLine, codesetFilename))
 			{
 				std::string_view argsView(currLine.data() + codesetFilename.size());
@@ -100,9 +132,14 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	return result;
 }
 
+void resetCompilationArgs()
+{
+	::doInlineBAConv = false;
+	::codesetBaseAddress = UINT_MAX;
+	::ignoreSettingsFile = false;
+}
  int main(int argc, char* argv[])
 {
-	compileGCT compile;
 	::provideTXT = false;
 	::provideLOG = false;
 	::preserveOld = false;
@@ -111,11 +148,7 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	::astUsage = false;
 	::pressKeyClose = true;
 	::repairPathCase = false;
-	::doInlineBAConv = false;
-	::codesetBaseAddress = UINT_MAX;
-	::ignoreSettingsFile = false;
-	
-	cout << "GCTRealMate v0.2.5" << endl;
+	cout << "GCTRealMate " << versionString << endl;
 	if (argc <= 1)
 	{
 		cout << "How to use GCTRealMate." << endl;
@@ -128,40 +161,51 @@ bool parseSettingsFile(const std::filesystem::path& settingsPath, const std::fil
 	{
 		std::string combinedArgStr;
 		combinedArgStr.reserve(0x40);
-		uint32_t checksToSkip = 0;
-		bool compiledGCT = 0;
+		std::filesystem::path selfPath(std::filesystem::absolute(argv[0]).make_preferred());
+		std::filesystem::path settingsPath = std::filesystem::path(selfPath).replace_extension("ini");
 		for (std::size_t itr = 1; itr < argc; itr++)
 		{
-			if ((--checksToSkip == 0) || argv[itr][0] == '-')
+			if (argv[itr][0] == '-')
 			{
 				combinedArgStr += argv[itr]; combinedArgStr += " ";
-				if (argv[itr][1] == 'b')
-				{
-					checksToSkip = 1;
-				}
 			}
-			else if (!compiledGCT)
+			else
 			{
-				parseCmdLineArgs(combinedArgStr);
-				combinedArgStr.clear();
-				std::filesystem::path selfPath(std::filesystem::absolute(argv[0]));
-				std::filesystem::path settingsPath(selfPath.replace_extension(".ini"));
-				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]));
-				if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+				std::filesystem::path absolutePath(std::filesystem::absolute(argv[itr]).make_preferred());
+				if (std::filesystem::is_regular_file(absolutePath))
 				{
-					parseSettingsFile(settingsPath, absolutePath);
+					resetCompilationArgs();
+					setIniIgnoredFlag(combinedArgStr);
+					if (!ignoreSettingsFile && std::filesystem::is_regular_file(settingsPath))
+					{
+						parseSettingsFile(settingsPath, absolutePath);
+					}
+					parseCmdLineArgs(combinedArgStr);
+
+					if (::provideTXT && !::codeset.is_open())
+					{
+						std::filesystem::path txtPath(absolutePath.parent_path());
+						txtPath.append(absolutePath.stem().string().append("_codeset.txt"));
+						::codeset.open(txtPath, ofstream::trunc);  
+					}
+					if (::provideLOG && !::logFile.is_open())
+					{
+						std::filesystem::path logPath(absolutePath.parent_path());
+						logPath.append(absolutePath.stem().string().append("_log.txt"));
+						::logFile.open(logPath, ofstream::trunc);
+					}
+					
+					compileGCT().compile(absolutePath);
+					
+					if (::codeset.is_open()) { ::codeset.close(); }
+					if (::logFile.is_open()) { ::logFile.close(); }
+					combinedArgStr.clear();
 				}
-				compile.compile(absolutePath);
-				compiledGCT = 1;
 			}
 		}
 		parseCmdLineArgs(combinedArgStr);
 	}
 
-	if (::logFile.is_open())
-		::logFile.close();
-	if (::codeset.is_open())
-		::codeset.close();
 	if (::pressKeyClose)
 	{
 		cout << "Press enter to close.";
