@@ -716,6 +716,8 @@ void compileGCT::parseLine(string& temp, string& tempLine, textMode& mode, istre
 		case '*':
 			if (temp == "")
 				break;
+			else
+				temp += tempchar; tempLine += tempchar; break;
 			break;
 		default: temp += tempchar; tempLine += tempchar;
 		};
