@@ -743,8 +743,34 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 	{
 		switch (line.at(i))
 		{
-		case '-': case '+': case '*': case '/': case '&': case '|': case '^': case '~': case '%':
-			tempStrings.emplace_back(); tempStrings.back() = line.at(i);
+		case '%':
+			{
+				std::string_view remaining(line.data() + i);
+				std::size_t nextPercent = remaining.find('%', 1);
+				std::size_t nextBlank = remaining.find_first_of(" \t\n\r");
+				if (nextBlank > nextPercent)
+				{
+					std::string_view directive = remaining.substr(1, nextPercent - 1);
+					if (iequals(directive, "HERE"))
+					{
+						if (codesetBaseAddress != UINT32_MAX)
+						{
+							tempStrings.back() = std::to_string(codesetBaseAddress + alias.getGctPos() + alias.getLen());
+						}
+						i += nextPercent;
+					}
+					else if (iequals(directive, "GCT"))
+					{
+						if (codesetBaseAddress != UINT32_MAX)
+						{
+							tempStrings.back() = std::to_string(codesetBaseAddress);
+						}
+					}
+					break;
+				}
+			}
+		case '-': case '+': case '*': case '/': case '&': case '|': case '^': case '~': 
+			tempStrings.emplace_back(line.substr(i, 1));
 		case '=': case ',':
 			tempStrings.emplace_back();
 		case ' ': case '\t': 
