@@ -741,7 +741,8 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 	tempStrings.emplace_back();
 	for (int i = 0; i < line.size(); i++)
 	{
-		switch (line.at(i))
+		char currChar = line.at(i);
+		switch (currChar)
 		{
 		case '%':
 			{
@@ -782,6 +783,19 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 				tempStrings.back() += line.at(i);
 			}
 			break;
+		case '<': case '>':
+		{
+			if ((line.size() - i) > 1)
+			{
+				if(currChar == line[i + 1])
+				{
+					tempStrings.emplace_back(line.substr(i, 2));
+					tempStrings.emplace_back();
+					i++;
+					break;
+				}
+			}
+		}
 		default:
 			tempStrings.back() += line.at(i);
 		}
@@ -799,7 +813,8 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 		vector<long int> math;
 		for (int k = 1, l = 1; k < tempStrings.size() && !containString; k++, l = k)
 		{
-			switch (tempStrings[k].at(0))
+			char currChar = tempStrings[k].at(0);
+			switch (currChar)
 			{
 			case '+':
 				l++;
@@ -827,6 +842,24 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 				k++; math.back() |= _STOI(tempStrings[k]); break;
 			case '%':
 				k++; math.back() %= _STOI(tempStrings[k]); break;
+			case '<': case '>':
+			{
+				std::string_view currStr(tempStrings[k]);
+				if (currStr.size() == 2 && currChar == currStr[1])
+				{
+					uint32_t value = math.back();
+					int argument = _STOI(tempStrings[++k]);
+					if (currChar == '<')
+					{
+						math.back() = value << argument;
+					}
+					else
+					{
+						math.back() = value >> argument;
+					}
+					break;
+				}
+			}
 			default:
 				math.emplace_back(_STOI(tempStrings[k]));
 
