@@ -196,6 +196,7 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 			}
 			else if (iequals(temp.substr(0, 6), ".alias"))
 			{
+				dumpRawBytes(rawBytes);
 				if (mode == opCodeMode)
 					compileAlias(temp.substr(6), geckoOps.back(), true);
 				else if (mode != seekEnabledCode)
