@@ -19,7 +19,7 @@ extern ofstream logFile, codeset;
 #define ISIT2(stringCheck) isString(line,stringCheck)
 #define MAXSTRM numeric_limits<streamsize>::max()
 #define IGNORE(character) ignore(MAXSTRM,character)
-#define STOI_ (uint32_t)stoul(line.substr(tempOff),nullptr,0)
+#define STOI_ unsignedConvert(line.substr(tempOff, line.find_first_of(",@") - tempOff), geckoOps.back())
 #define _STOI(line1) stoul(line1,nullptr,0)
 
 class compileGCT
