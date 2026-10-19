@@ -59,7 +59,7 @@ void Code::ImplementLabel()
 		}
 	}
 }
-void Code::findAliases(string& comparedString, bool& foundVal)
+void Code::findAliases(string& comparedString, bool& foundVal) const
 {
 	for (int i = 0; i < localReplaceList.aliasList.size(); i++)
 	{

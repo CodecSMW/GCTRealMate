@@ -43,7 +43,10 @@ class compileGCT
 	int textSize, functionCount, GCTbytes;
 	bool breakLine, error;
 	uint8_t charPair2Hex(string& line);
-	uint32_t addressConvert(string line, const Code& alias);
+	
+	int32_t signedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase = 0);
+	uint32_t unsignedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase = 0);
+	uint32_t addressConvert(const std::string& str, const Code& codeIn);
 	bool handleAddressSet(string& line, Code& alias);
 	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);

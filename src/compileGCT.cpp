@@ -1654,31 +1654,48 @@ bool compileGCT::isJustHex(string& line)
 		return false;
 	return true;
 }
-uint32_t compileGCT::addressConvert(string line, const Code& alias)
+
+int32_t compileGCT::signedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase)
+{
+	int32_t result = INT32_MAX;
+
+	bool aliasFound = 0;
+	std::string aliasContent = str;
+	codeIn.findAliases(aliasContent, aliasFound);
+	if (aliasFound)
+	{
+		result = std::stol(aliasContent,nullptr,10);
+	}
+	else
+	{
+		result = std::stol(str, nullptr, numericalBase);
+	}
+
+	return result; 
+}
+uint32_t compileGCT::unsignedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase)
 {
 	uint32_t result = UINT32_MAX;
-
-	for (auto itr = alias.localReplaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.localReplaceList.aliasList.end(); itr++)
+	
+	bool aliasFound = 0;
+	std::string aliasContent = str;
+	codeIn.findAliases(aliasContent, aliasFound);
+	if (aliasFound)
 	{
-		if (equals(itr->aliasName, line))
-		{
-			result = std::stoul(itr->aliasContent,nullptr,10);
-		}
+		result = std::stoul(aliasContent,nullptr,10);
 	}
-	for (auto itr = alias.replaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.replaceList.aliasList.end(); itr++)
+	else
 	{
-		if (equals(itr->aliasName, line))
-		{
-			result = std::stoul(itr->aliasContent,nullptr,10);
-		}
-	}
-	if (result == UINT32_MAX)
-	{
-		result = std::stoul(line.substr(0, 8), nullptr, 16);
+		result = std::stoul(str, nullptr, numericalBase);
 	}
 	
 	return result;
 }
+uint32_t compileGCT::addressConvert(const std::string& str, const Code& codeIn)
+{
+	return unsignedConvert(str.substr(0x0, 0x8), codeIn, 0x10);
+}
+
 uint8_t compileGCT::charPair2Hex(string& line)
 {
 	uint8_t temp = 0;
