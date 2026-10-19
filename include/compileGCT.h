@@ -50,9 +50,14 @@ class compileGCT
 	bool handleAddressSet(string& line, Code& alias);
 	void handleRaw(string& line, queue<uint8_t>& content);
 	void dumpRawBytes(queue<uint8_t>& content);
-	int getArraySize(string& line, int& tempOff), seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels);
-	bool isJustHex(string& line), isCodeName(string& line), hasAddress(string& line), hasType(string& line);
-	bool isString(string& line, string comp, int& offset), isString(string& line, string comp);
+	int getArraySize(string& line, int& tempOff);
+	int seekLabelDistance(string labelName, int offsetOp, int maxSize, vector<label>& labels);
+	bool isJustHex(const string& line, bool enforceLength = 1);
+	bool isCodeName(const string& line);
+	bool hasAddress(const string& line);
+	bool hasType(string& line);
+	bool isString(string& line, string comp, int& offset);
+	bool isString(string& line, string comp);
 	bool isOp(string& line);
 	int convCharToHex(char hexchar);
 	void processLines(std::filesystem::path name, queue<Code>& geckoOps, bool& error);

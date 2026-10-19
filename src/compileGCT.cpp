@@ -1628,14 +1628,14 @@ bool compileGCT::hasType(string& line)
 		return true;
 	return false;
 }
-bool compileGCT::hasAddress(string& line)
+bool compileGCT::hasAddress(const string& line)
 {
 	for (int i = 0; i < line.size(); i++)
 		if (line.at(i) == '@')
 			return true;
 	return false;
 }
-bool compileGCT::isCodeName(string& line) // Don't use @ in code names!!!!
+bool compileGCT::isCodeName(const string& line) // Don't use @ in code names!!!!
 {
 	for (int i = 0; i < line.size(); i++)
 		if (line[i] == '@')
@@ -1643,16 +1643,16 @@ bool compileGCT::isCodeName(string& line) // Don't use @ in code names!!!!
 	return (line.size() == 16 && isJustHex(line)) ? false : true; // expected to have 16 hex numbers if not a name
 }
 
-bool compileGCT::isJustHex(string& line)
+bool compileGCT::isJustHex(const string& line, bool enforceLength)
 {
-	for (int i = 0; i < line.size(); i++)
-		if (!((line[i] >= 'a' && line[i] <= 'f') ||
-			(line[i] >= 'A' && line[i] <= 'F') ||
-			(line[i] >= '0' && line[i] <= '9')))
-			return false;
-	if (line.size() != 16)
-		return false;
-	return true;
+	std::size_t len = line.size();
+	bool result = (enforceLength) ? len == 0x10 : 1;
+	for (std::size_t i = 0; result && i < len; i++)
+	{
+		auto c = line[i];
+		result &= (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+	}
+	return result;
 }
 
 int32_t compileGCT::signedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase)
