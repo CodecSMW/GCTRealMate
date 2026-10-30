@@ -39,7 +39,7 @@ public:
 	int NextLabelRequest();
 	void ImplementLabel();
 	void FoundError(errorNo errorID, string context);
-	void findAliases(string& comparedString, bool& foundVal);
+	void findAliases(string& comparedString, bool& foundVal) const;
 	string getMacro(string macroName, vector<string>& ArgOrig);
 	uint32_t getLen();
 	uint32_t getGctPos();

@@ -196,6 +196,7 @@ void compileGCT::processLines(std::filesystem::path name, queue<Code>& geckoOps,
 			}
 			else if (iequals(temp.substr(0, 6), ".alias"))
 			{
+				dumpRawBytes(rawBytes);
 				if (mode == opCodeMode)
 					compileAlias(temp.substr(6), geckoOps.back(), true);
 				else if (mode != seekEnabledCode)
@@ -741,10 +742,37 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 	tempStrings.emplace_back();
 	for (int i = 0; i < line.size(); i++)
 	{
-		switch (line.at(i))
+		char currChar = line.at(i);
+		switch (currChar)
 		{
-		case '-': case '+': case '*': case '/': case '&': case '|': case '^': case '~': case '%':
-			tempStrings.emplace_back(); tempStrings.back() = line.at(i);
+		case '%':
+			{
+				std::string_view remaining(line.data() + i);
+				std::size_t nextPercent = remaining.find('%', 1);
+				std::size_t nextBlank = remaining.find_first_of(" \t\n\r");
+				if (nextBlank > nextPercent)
+				{
+					std::string_view directive = remaining.substr(1, nextPercent - 1);
+					if (iequals(directive, "HERE"))
+					{
+						if (codesetBaseAddress != UINT32_MAX)
+						{
+							tempStrings.back() = std::to_string(codesetBaseAddress + alias.getGctPos() + alias.getLen());
+						}
+						i += nextPercent;
+					}
+					else if (iequals(directive, "GCT"))
+					{
+						if (codesetBaseAddress != UINT32_MAX)
+						{
+							tempStrings.back() = std::to_string(codesetBaseAddress);
+						}
+					}
+					break;
+				}
+			}
+		case '-': case '+': case '*': case '/': case '&': case '|': case '^': case '~': 
+			tempStrings.emplace_back(line.substr(i, 1));
 		case '=': case ',':
 			tempStrings.emplace_back();
 		case ' ': case '\t': 
@@ -756,6 +784,19 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 				tempStrings.back() += line.at(i);
 			}
 			break;
+		case '<': case '>':
+		{
+			if ((line.size() - i) > 1)
+			{
+				if(currChar == line[i + 1])
+				{
+					tempStrings.emplace_back(line.substr(i, 2));
+					tempStrings.emplace_back();
+					i++;
+					break;
+				}
+			}
+		}
 		default:
 			tempStrings.back() += line.at(i);
 		}
@@ -773,7 +814,8 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 		vector<long int> math;
 		for (int k = 1, l = 1; k < tempStrings.size() && !containString; k++, l = k)
 		{
-			switch (tempStrings[k].at(0))
+			char currChar = tempStrings[k].at(0);
+			switch (currChar)
 			{
 			case '+':
 				l++;
@@ -801,6 +843,24 @@ void compileGCT::compileAlias(string line, Code& alias, bool isLocal)
 				k++; math.back() |= _STOI(tempStrings[k]); break;
 			case '%':
 				k++; math.back() %= _STOI(tempStrings[k]); break;
+			case '<': case '>':
+			{
+				std::string_view currStr(tempStrings[k]);
+				if (currStr.size() == 2 && currChar == currStr[1])
+				{
+					uint32_t value = math.back();
+					int argument = _STOI(tempStrings[++k]);
+					if (currChar == '<')
+					{
+						math.back() = value << argument;
+					}
+					else
+					{
+						math.back() = value >> argument;
+					}
+					break;
+				}
+			}
 			default:
 				math.emplace_back(_STOI(tempStrings[k]));
 
@@ -1568,14 +1628,14 @@ bool compileGCT::hasType(string& line)
 		return true;
 	return false;
 }
-bool compileGCT::hasAddress(string& line)
+bool compileGCT::hasAddress(const string& line)
 {
 	for (int i = 0; i < line.size(); i++)
 		if (line.at(i) == '@')
 			return true;
 	return false;
 }
-bool compileGCT::isCodeName(string& line) // Don't use @ in code names!!!!
+bool compileGCT::isCodeName(const string& line) // Don't use @ in code names!!!!
 {
 	for (int i = 0; i < line.size(); i++)
 		if (line[i] == '@')
@@ -1583,42 +1643,59 @@ bool compileGCT::isCodeName(string& line) // Don't use @ in code names!!!!
 	return (line.size() == 16 && isJustHex(line)) ? false : true; // expected to have 16 hex numbers if not a name
 }
 
-bool compileGCT::isJustHex(string& line)
+bool compileGCT::isJustHex(const string& line, bool enforceLength)
 {
-	for (int i = 0; i < line.size(); i++)
-		if (!((line[i] >= 'a' && line[i] <= 'f') ||
-			(line[i] >= 'A' && line[i] <= 'F') ||
-			(line[i] >= '0' && line[i] <= '9')))
-			return false;
-	if (line.size() != 16)
-		return false;
-	return true;
+	std::size_t len = line.size();
+	bool result = (enforceLength) ? len == 0x10 : 1;
+	for (std::size_t i = 0; result && i < len; i++)
+	{
+		auto c = line[i];
+		result &= (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+	}
+	return result;
 }
-uint32_t compileGCT::addressConvert(string line, const Code& alias)
+
+int32_t compileGCT::signedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase)
+{
+	int32_t result = INT32_MAX;
+
+	bool aliasFound = 0;
+	std::string aliasContent = str;
+	codeIn.findAliases(aliasContent, aliasFound);
+	if (aliasFound)
+	{
+		result = std::stol(aliasContent,nullptr,10);
+	}
+	else
+	{
+		result = std::stol(str, nullptr, numericalBase);
+	}
+
+	return result; 
+}
+uint32_t compileGCT::unsignedConvert(const std::string& str, const Code& codeIn, uint32_t numericalBase)
 {
 	uint32_t result = UINT32_MAX;
-
-	for (auto itr = alias.localReplaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.localReplaceList.aliasList.end(); itr++)
+	
+	bool aliasFound = 0;
+	std::string aliasContent = str;
+	codeIn.findAliases(aliasContent, aliasFound);
+	if (aliasFound)
 	{
-		if (equals(itr->aliasName, line))
-		{
-			result = std::stoul(itr->aliasContent,nullptr,10);
-		}
+		result = std::stoul(aliasContent,nullptr,10);
 	}
-	for (auto itr = alias.replaceList.aliasList.begin(); result == UINT32_MAX && itr != alias.replaceList.aliasList.end(); itr++)
+	else
 	{
-		if (equals(itr->aliasName, line))
-		{
-			result = std::stoul(itr->aliasContent,nullptr,10);
-		}
-	}
-	if (result == UINT32_MAX)
-	{
-		result = std::stoul(line.substr(0, 8), nullptr, 16);
+		result = std::stoul(str, nullptr, numericalBase);
 	}
 	
 	return result;
 }
+uint32_t compileGCT::addressConvert(const std::string& str, const Code& codeIn)
+{
+	return unsignedConvert(str.substr(0x0, 0x8), codeIn, 0x10);
+}
+
 uint8_t compileGCT::charPair2Hex(string& line)
 {
 	uint8_t temp = 0;
